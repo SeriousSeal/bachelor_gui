@@ -10,8 +10,7 @@ import ReactFlow, {
   useEdgesState,
   Handle,
   Position,
-  useReactFlow,
-  fitView
+  useReactFlow
   
 } from 'reactflow';
 import 'reactflow/dist/style.css';
@@ -122,20 +121,6 @@ const buildVisualizationTree = (root) => {
   return { nodes, edges };
 };
 
-const initialNodesTree1 = [
-  { id: '1-1', type: 'custom', data: { label: 'A' }, position: { x: 0, y: 0 } },
-  { id: '1-2', type: 'custom', data: { label: 'B' }, position: { x: -100, y: 100 } },
-  { id: '1-3', type: 'custom', data: { label: 'C' }, position: { x: 100, y: 100 } },
-  { id: '1-4', type: 'custom', data: { label: 'D' }, position: { x: -150, y: 200 } },
-  { id: '1-5', type: 'custom', data: { label: 'E' }, position: { x: -50, y: 200 } },
-];
-
-const initialEdgesTree1 = [
-  { id: 'e1-1-2', source: '1-1', target: '1-2', type: 'step' },
-  { id: 'e1-1-3', source: '1-1', target: '1-3', type: 'step' },
-  { id: 'e1-2-4', source: '1-2', target: '1-4', type: 'step' },
-  { id: 'e1-2-5', source: '1-2', target: '1-5', type: 'step' },
-];
 
 const initialNodesTree2 = [
   { id: '2-1', type: 'custom', data: { label: 'X' }, position: { x: 0, y: 0 } },
