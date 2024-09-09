@@ -6,7 +6,7 @@ function App() {
   return (
     <div className="App">
       <header className="App-header">
-        <h1>Einsum Tree Compilation Visualizer</h1>
+        <h1>Einsum Tree Visualizer</h1>
       </header>
       <main>
         <EinsumTreeVisualizer />

@@ -14,3 +14,7 @@ node -v
 
 docker-compose build
 docker-compose up
+
+
+getestet als visualisierungsoftware d3, nivo, react-d3-tree
+als einfachstes und bestes für den Fall: reactflow
