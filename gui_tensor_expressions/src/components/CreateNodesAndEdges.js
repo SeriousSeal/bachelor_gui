@@ -13,7 +13,7 @@ const EinsumContractionTree = ({ iString, iPath, iSizes = null }) => {
       for (const lTuple of iContractPath) {
         const newInterString = interStringSingle(lTuple, lString);
         lStringsInter.push(newInterString);
-    
+        console.log(newInterString);
         // Update lStringsIn
         lStringsIn = [
           ...lStringsIn.slice(0, Math.min(...lTuple)),
@@ -96,9 +96,12 @@ const EinsumContractionTree = ({ iString, iPath, iSizes = null }) => {
       lContractInRight,
       lStringRemaining
     );
+    console.log(lB, lM, lN);
   
     // Combine preserved dimensions in the correct order
     const lResult = [...new Set([...lB, ...lM, ...lN])].join('');
+
+    console.log(lResult);
   
     return lResult;
   };
