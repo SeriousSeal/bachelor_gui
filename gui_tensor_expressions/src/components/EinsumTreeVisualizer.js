@@ -1,43 +1,20 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
-import EinsumContractionTree from './CreateNodesAndEdges';
-import ReactFlow, { 
+import React, { useState, useCallback, useRef } from 'react';
+import { Panel, PanelGroup } from 'react-resizable-panels';
+import {parseTree} from './EinsumContractionTree';
+import Flow from './visual/Flow';
+import HistoryPanel from './visual/HistoryPanel';
+import IndexSizeInput from './visual/IndexSizeInput';
+import CollapsiblePanel from './visual/CollapsiblePanel';
+import CustomPanelResizeHandle from './visual/CustomPanelResizeHandle';
+import { 
   ReactFlowProvider,
-  addEdge, 
-  Background, 
-  Controls, 
+  addEdge,
   useNodesState, 
   useEdgesState,
-  Handle,
-  Position,
-  useReactFlow,
-  fitView
   
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 
-const CustomNode = ({ data }) => (
-  <div style={{ 
-    background: '#fff', 
-    border: '1px solid #777', 
-    borderRadius: '8px', 
-    width: '40px', 
-    height: '40px', 
-    display: 'flex', 
-    justifyContent: 'center', 
-    alignItems: 'center',
-    fontSize: '14px',
-    cursor: 'pointer', // Ensure the cursor indicates a clickable element
-  }}>
-    {data.label}
-    <Handle type="target" position={Position.Top} style={{ visibility: 'hidden' }} />
-    <Handle type="source" position={Position.Bottom} style={{ visibility: 'hidden' }} />
-  </div>
-);
-
-const nodeTypes = {
-  custom: CustomNode,
-};
 
 const buildVisualizationTree = (root) => {
   let nodes = [];
@@ -97,7 +74,7 @@ const buildVisualizationTree = (root) => {
     nodes.push({
       id: currentId,
       type: 'custom',
-      data: { label: node.string },
+      data: { label: node.value},
       position: { x: node.x, y: node.y }
     });
 
@@ -122,20 +99,6 @@ const buildVisualizationTree = (root) => {
   return { nodes, edges };
 };
 
-const initialNodesTree1 = [
-  { id: '1-1', type: 'custom', data: { label: 'A' }, position: { x: 0, y: 0 } },
-  { id: '1-2', type: 'custom', data: { label: 'B' }, position: { x: -100, y: 100 } },
-  { id: '1-3', type: 'custom', data: { label: 'C' }, position: { x: 100, y: 100 } },
-  { id: '1-4', type: 'custom', data: { label: 'D' }, position: { x: -150, y: 200 } },
-  { id: '1-5', type: 'custom', data: { label: 'E' }, position: { x: -50, y: 200 } },
-];
-
-const initialEdgesTree1 = [
-  { id: 'e1-1-2', source: '1-1', target: '1-2', type: 'step' },
-  { id: 'e1-1-3', source: '1-1', target: '1-3', type: 'step' },
-  { id: 'e1-2-4', source: '1-2', target: '1-4', type: 'step' },
-  { id: 'e1-2-5', source: '1-2', target: '1-5', type: 'step' },
-];
 
 const initialNodesTree2 = [
   { id: '2-1', type: 'custom', data: { label: 'X' }, position: { x: 0, y: 0 } },
@@ -148,69 +111,6 @@ const initialEdgesTree2 = [
   { id: 'e2-1-3', source: '2-1', target: '2-3', type: 'step' },
 ];
 
-const Flow = ({ nodes, edges, onNodesChange, onEdgesChange, onConnect, onNodeClick, fitViewFunction }) => {
-  const { fitView } = useReactFlow();
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      fitView({ padding: 0.2, includeHiddenNodes: false });
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [fitView]);
-
-  // Expose fitView function
-  useEffect(() => {
-    if (fitViewFunction) {
-      fitViewFunction(() => fitView({ padding: 0.2, includeHiddenNodes: false }));
-    }
-  }, [fitView, fitViewFunction]);
-
-  return (
-    <ReactFlow
-      nodes={nodes}
-      edges={edges}
-      onNodesChange={onNodesChange}
-      onEdgesChange={onEdgesChange}
-      onConnect={onConnect}
-      nodeTypes={nodeTypes}
-      fitView
-      fitViewOptions={{ padding: 0.2 }}
-      minZoom={0.1}
-      maxZoom={4}
-      style={{ width: '100%', height: '100%' }}
-      onNodeClick={onNodeClick}
-    >
-      <Controls />
-      <Background variant="dots" gap={12} size={1} />
-    </ReactFlow>
-  );
-};
-
-const NodeDataDisplay = ({ node }) => {
-  if (!node) return null;
-
-  return (
-    <div style={{ 
-      backgroundColor: '#f0f0f0', 
-      padding: '10px', 
-      borderRadius: '5px',
-      marginTop: '20px',
-    }}>
-      <h3>Selected Node Data</h3>
-      <p><strong>ID:</strong> {node.id}</p>
-      <p><strong>Type:</strong> {node.type}</p>
-      <p><strong>Position:</strong> x: {node.position.x}, y: {node.position.y}</p>
-      <p><strong>Data:</strong> {JSON.stringify(node.data)}</p>
-    </div>
-  );
-};
-
-const CustomPanelResizeHandle = ({ className, ...props }) => (
-  <PanelResizeHandle 
-    className={`custom-resize-handle ${className}`}
-    {...props}
-  />
-);
 
 
 const EinsumTreeVisualizer = () => {
@@ -219,12 +119,13 @@ const EinsumTreeVisualizer = () => {
   const [nodes2, setNodes2, onNodesChange2] = useNodesState(initialNodesTree2);
   const [edges2, setEdges2, onEdgesChange2] = useEdgesState(initialEdgesTree2);
   const [einsumExpression, setEinsumExpression] = useState('');
-  const [selectedNode, setSelectedNode] = useState(null);
+  const [selectedNode, setSelectedNode] = useState(null);  
+  const [indexSizes, setIndexSizes] = useState({});
+  const [history, setHistory] = useState([]);
 
   const fitViewFunctions = useRef({ tree1: null, tree2: null });
   const onConnect1 = useCallback((params) => setEdges1((eds) => addEdge(params, eds)), [setEdges1]);
   const onConnect2 = useCallback((params) => setEdges2((eds) => addEdge(params, eds)), [setEdges2]);
-
 
   const handleEinsumInputChange = (event) => {
     setEinsumExpression(event.target.value);
@@ -235,79 +136,131 @@ const EinsumTreeVisualizer = () => {
     setSelectedNode(node);
   }, []);
 
-  const parseInput = () => {
-    const iString = "eai,fb,abcd,gic,hd->iefgh";
-    const iPath = [[1, 2], [2, 3], [0, 1], [0, 1]];
-    const iSizes = [[10,10,10], [10, 10], [10, 10, 10, 10], [10, 10,10], [10, 10]];
-    const tree = EinsumContractionTree({
-      iString: iString,
-      iPath: iPath,
-      iSizes: iSizes
-    });
+  const parseInput = (einsumExpression) => {
+    const input = einsumExpression || "[[h,d]+[[f,b]+[a,b,c,d]->[f,a,c,d]]->[h,a,c,f]]+[[e,a,i]+[g,i,c]->[i,a,e,c,g]]->[i,e,f,g,h]";
+    const tree = parseTree(input);
     const { nodes, edges } = buildVisualizationTree(tree);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     setNodes1(nodes);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     setEdges1(edges);
+
+    const newIndexSizes = {};
+    nodes.forEach(node => {
+      if (node.data && node.data.label && Array.isArray(node.data.label)) {
+        node.data.label.forEach(index => {
+          if (!newIndexSizes[index]) {
+            newIndexSizes[index] = 10; // Default size, adjust as needed
+          }
+        });
+      }
+    });
+    setIndexSizes(newIndexSizes);
+
+    // Check if the expression already exists in history
+    setHistory(prevHistory => {
+      const newItem = { expression: input, nodes, edges, indexSizes: newIndexSizes };
+      const existingIndex = prevHistory.findIndex(item => item.expression === input);
+      
+      let updatedHistory;
+      if (existingIndex !== -1) {
+        // If it exists, remove it from its current position
+        updatedHistory = [
+          newItem,
+          ...prevHistory.slice(0, existingIndex),
+          ...prevHistory.slice(existingIndex + 1)
+        ];
+      } else {
+        // If it's new, add it to the beginning
+        updatedHistory = [newItem, ...prevHistory];
+      }
+      
+      // Keep only the last 5 entries
+      return updatedHistory.slice(0, 5);
+    });
+    
     setTimeout(() => fitView('tree1'), 0)
+  };
+
+  const selectTreeFromHistory = (item) => {
+    setNodes1(item.nodes);
+    setEdges1(item.edges);
+    setIndexSizes(item.indexSizes);
+    setEinsumExpression(item.expression);
+    setTimeout(() => fitView('tree1'), 0);
   };
 
   const fitView = (tree) => {
     fitViewFunctions.current[tree]?.();
   };
 
-
   return (
-    <PanelGroup direction="horizontal" >
-      <Panel defaultSize={50} minSize={20}>
-        <div style={{ height: '100%', border: '1px solid #e0e0e0' }}>
-          <PanelGroup direction="vertical">
-            <Panel defaultSize={50} minSize={10}>
-              <ReactFlowProvider>
-                <Flow
-                  nodes={nodes1}
-                  edges={edges1}
-                  onNodesChange={onNodesChange1}
-                  onEdgesChange={onEdgesChange1}
-                  onConnect={onConnect1}
-                  onNodeClick={onNodeClick}                  
-                  fitViewFunction={(fn) => (fitViewFunctions.current.tree1 = fn)}
-                />
-              </ReactFlowProvider>
-            </Panel>
-            <CustomPanelResizeHandle />
-            <Panel minSize={10}>
-              <ReactFlowProvider>
-                <Flow
-                  nodes={nodes2}
-                  edges={edges2}
-                  onNodesChange={onNodesChange2}
-                  onEdgesChange={onEdgesChange2}
-                  onConnect={onConnect2}                  
-                  fitViewFunction={(fn) => (fitViewFunctions.current.tree2 = fn)}
+    <div className="h-screen bg-gray-50">
+      <PanelGroup direction="horizontal" className="h-full">
+        <Panel defaultSize={50} minSize={20}>
+          <div className="h-full border border-gray-200 rounded-lg overflow-hidden shadow-lg">
+            <PanelGroup direction="vertical">
+              <Panel defaultSize={50} minSize={10}>
+                <ReactFlowProvider>
+                  <Flow
+                    nodes={nodes1}
+                    edges={edges1}
+                    onNodesChange={onNodesChange1}
+                    onEdgesChange={onEdgesChange1}
+                    onConnect={onConnect1}
+                    onNodeClick={onNodeClick}                  
+                    fitViewFunction={(fn) => (fitViewFunctions.current.tree1 = fn)}
                   />
                 </ReactFlowProvider>
-            </Panel>
-          </PanelGroup>
-        </div>
-      </Panel>
-      <CustomPanelResizeHandle />
-      <Panel minSize={20}>
-        <div style={{ padding: '1rem', height: '100%', overflow: 'auto' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-            <input
-              type="text"
-              placeholder="Enter einsum expression"
-              value={einsumExpression}
-              onChange={handleEinsumInputChange}
-              style={{ flexGrow: 1, padding: '0.5rem' }}
-            />
-            <button onClick={() => parseInput()} style={{ padding: '0.5rem 1rem' }}>
-              Parse
-            </button>
+              </Panel>
+              <CustomPanelResizeHandle />
+              <Panel minSize={10}>
+                <ReactFlowProvider>
+                  <Flow
+                    nodes={nodes2}
+                    edges={edges2}
+                    onNodesChange={onNodesChange2}
+                    onEdgesChange={onEdgesChange2}
+                    onConnect={onConnect2}                  
+                    fitViewFunction={(fn) => (fitViewFunctions.current.tree2 = fn)}
+                  />
+                </ReactFlowProvider>
+              </Panel>
+            </PanelGroup>
           </div>
-          <NodeDataDisplay node={selectedNode} />
-        </div>
-      </Panel>
-    </PanelGroup>
+        </Panel>
+        <CustomPanelResizeHandle />
+        <Panel minSize={20}>
+          <div className="p-6 h-full overflow-auto bg-white rounded-lg shadow-lg">
+            <div className="flex items-center gap-4 mb-6">
+              <input
+                type="text"
+                placeholder="Enter einsum expression"
+                value={einsumExpression}
+                onChange={handleEinsumInputChange}
+                className="flex-grow p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <button 
+                onClick={() => parseInput(einsumExpression)} 
+                className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+              >
+                Parse
+              </button>
+            </div>
+            <HistoryPanel history={history} onSelectTree={selectTreeFromHistory} />
+            <IndexSizeInput indexSizes={indexSizes} setIndexSizes={setIndexSizes} />
+            {selectedNode && (
+              <CollapsiblePanel title="Selected Node Data">
+                <p><span className="font-medium">ID:</span> {selectedNode.id}</p>
+                <p><span className="font-medium">Type:</span> {selectedNode.type}</p>
+                <p><span className="font-medium">Position:</span> x: {selectedNode.position.x}, y: {selectedNode.position.y}</p>
+                <p><span className="font-medium">Data:</span> {JSON.stringify(selectedNode.data)}</p>
+              </CollapsiblePanel>
+            )}
+          </div>
+        </Panel>
+      </PanelGroup>
+    </div>
   );
 };
 
