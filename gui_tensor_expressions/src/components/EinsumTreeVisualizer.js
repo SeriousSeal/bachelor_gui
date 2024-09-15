@@ -1,11 +1,12 @@
 import React, { useState, useCallback, useRef } from 'react';
 import { Panel, PanelGroup } from 'react-resizable-panels';
-import {parseTree} from './EinsumContractionTree';
+import { Tree } from './EinsumContractionTree';
 import Flow from './visual/Flow';
 import HistoryPanel from './visual/HistoryPanel';
 import IndexSizeInput from './visual/IndexSizeInput';
 import CollapsiblePanel from './visual/CollapsiblePanel';
 import CustomPanelResizeHandle from './visual/CustomPanelResizeHandle';
+import buildVisualizationTree from './visual_Tree';
 import { 
   ReactFlowProvider,
   addEdge,
@@ -14,90 +15,6 @@ import {
   
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-
-
-const buildVisualizationTree = (root) => {
-  let nodes = [];
-  let edges = [];
-  let idCounter = 1;
-  const nodeWidth = 150;
-  const nodeHeight = 40;
-  const levelHeight = 100;
-
-  // First pass: assign initial x coordinates and determine tree dimensions
-  const assignInitialX = (node, depth = 0) => {
-    if (!node) return { width: 0, height: 0 };
-
-    const leftSubtree = assignInitialX(node.left, depth + 1);
-    const rightSubtree = assignInitialX(node.right, depth + 1);
-
-    const width = Math.max(nodeWidth, leftSubtree.width + rightSubtree.width);
-    const height = Math.max(leftSubtree.height, rightSubtree.height) + 1;
-
-    node.x = leftSubtree.width;
-    node.y = depth * levelHeight;
-    node.width = width;
-    node.height = height;
-
-    return { width, height };
-  };
-
-  // Second pass: adjust x coordinates to center parent over children
-  const adjustX = (node, offsetX = 0) => {
-    if (!node) return;
-
-    node.x += offsetX;
-
-    if (node.left || node.right) {
-      const leftWidth = node.left ? node.left.width : 0;
-      const rightWidth = node.right ? node.right.width : 0;
-      const totalWidth = leftWidth + rightWidth;
-
-      if (node.left) {
-        adjustX(node.left, offsetX);
-      }
-      if (node.right) {
-        adjustX(node.right, offsetX + leftWidth);
-      }
-
-      // Center the parent node above its children
-      node.x = offsetX + (totalWidth - nodeWidth) / 2;
-    }
-  };
-
-  // Third pass: create nodes and edges
-  const createNodesAndEdges = (node, parentId = null) => {
-    if (!node) return;
-
-    const currentId = `${idCounter++}`;
-
-    nodes.push({
-      id: currentId,
-      type: 'custom',
-      data: { label: node.value},
-      position: { x: node.x, y: node.y }
-    });
-
-    if (parentId !== null) {
-      edges.push({
-        id: `e${parentId}-${currentId}`,
-        source: parentId,
-        target: currentId,
-        type: 'smoothstep'  // Changed to smoothstep for better appearance
-      });
-    }
-
-    createNodesAndEdges(node.left, currentId);
-    createNodesAndEdges(node.right, currentId);
-  };
-
-  // Execute the three passes
-  assignInitialX(root);
-  adjustX(root);
-  createNodesAndEdges(root);
-
-  return { nodes, edges };
-};
 
 
 const initialNodesTree2 = [
@@ -138,24 +55,33 @@ const EinsumTreeVisualizer = () => {
 
   const parseInput = (einsumExpression) => {
     const input = einsumExpression || "[[h,d]+[[f,b]+[a,b,c,d]->[f,a,c,d]]->[h,a,c,f]]+[[e,a,i]+[g,i,c]->[i,a,e,c,g]]->[i,e,f,g,h]";
-    const tree = parseTree(input);
-    const { nodes, edges } = buildVisualizationTree(tree);
+    const tree = new Tree(input); 
+    const unorderedTree = tree.getRoot();
+    const { nodes, edges } = buildVisualizationTree(unorderedTree);
+    const newIndexSizes = {};
+
     // eslint-disable-next-line react-hooks/exhaustive-deps
     setNodes1(nodes);
     // eslint-disable-next-line react-hooks/exhaustive-deps
     setEdges1(edges);
 
-    const newIndexSizes = {};
     nodes.forEach(node => {
-      if (node.data && node.data.label && Array.isArray(node.data.label)) {
-        node.data.label.forEach(index => {
-          if (!newIndexSizes[index]) {
-            newIndexSizes[index] = 10; // Default size, adjust as needed
+      if (node.data && node.data.label) {
+        for (const indice of node.data.label) {
+          if (!newIndexSizes[indice]) {
+            newIndexSizes[indice] = 10; // Default size, adjust as needed
           }
-        });
+        }
       }
     });
     setIndexSizes(newIndexSizes);
+    console.log(nodes)
+    tree.updateIndexSizes(indexSizes);
+
+    //const reorderedTree = tree.reorder();
+
+
+
 
     // Check if the expression already exists in history
     setHistory(prevHistory => {

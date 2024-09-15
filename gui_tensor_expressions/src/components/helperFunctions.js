@@ -41,3 +41,44 @@ export function splitString(inputString) {
       this.sizes = null;
     }
   }
+
+  export function sizesDims(
+    i_string_in_left,
+    i_string_in_right,
+    i_sizes_left,
+    i_sizes_right,
+    i_b,
+    i_m,
+    i_n,
+    i_k
+  ) {
+    const l_sizes_b = [];
+    const l_sizes_m = [];
+    const l_sizes_n = [];
+    const l_sizes_k = [];
+  
+    const l_chars_left = [...i_string_in_left];
+    const l_chars_right = [...i_string_in_right];
+  
+    for (const l_char of i_b) {
+      const l_id = l_chars_left.indexOf(l_char);
+      l_sizes_b.push(i_sizes_left[l_id]);
+    }
+  
+    for (const l_char of i_m) {
+      const l_id = l_chars_left.indexOf(l_char);
+      l_sizes_m.push(i_sizes_left[l_id]);
+    }
+  
+    for (const l_char of i_n) {
+      const l_id = l_chars_right.indexOf(l_char);
+      l_sizes_n.push(i_sizes_right[l_id]);
+    }
+  
+    for (const l_char of i_k) {
+      const l_id = l_chars_left.indexOf(l_char);
+      l_sizes_k.push(i_sizes_left[l_id]);
+    }
+  
+    return [l_sizes_b, l_sizes_m, l_sizes_n, l_sizes_k];
+  }
