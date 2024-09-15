@@ -37,6 +37,7 @@ const EinsumTreeVisualizer = () => {
   const [edges2, setEdges2, onEdgesChange2] = useEdgesState(initialEdgesTree2);
   const [einsumExpression, setEinsumExpression] = useState('');
   const [selectedNode, setSelectedNode] = useState(null);  
+  const [tree, setTree] = useState(null);
   const [indexSizes, setIndexSizes] = useState({});
   const [history, setHistory] = useState([]);
 
@@ -53,18 +54,13 @@ const EinsumTreeVisualizer = () => {
     setSelectedNode(node);
   }, []);
 
-  const parseInput = (einsumExpression) => {
-    const input = einsumExpression || "[[h,d]+[[f,b]+[a,b,c,d]->[f,a,c,d]]->[h,a,c,f]]+[[e,a,i]+[g,i,c]->[i,a,e,c,g]]->[i,e,f,g,h]";
-    const tree = new Tree(input); 
-    const unorderedTree = tree.getRoot();
-    const { nodes, edges } = buildVisualizationTree(unorderedTree);
-    const newIndexSizes = {};
+  const handleTreeUpdate = () => {
+    // Create a new tree instance with updated sizes 
+    console.log(tree)
+    tree.updateIndexSizes(indexSizes);
+  };
 
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    setNodes1(nodes);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    setEdges1(edges);
-
+  const handleInpuSizeChange = (nodes, newIndexSizes) => {
     nodes.forEach(node => {
       if (node.data && node.data.label) {
         for (const indice of node.data.label) {
@@ -75,10 +71,29 @@ const EinsumTreeVisualizer = () => {
       }
     });
     setIndexSizes(newIndexSizes);
-    console.log(nodes)
+    return newIndexSizes;
+  };
+
+
+  const parseInput = (einsumExpression) => {
+    const input = einsumExpression || "[[h,d]+[[f,b]+[a,b,c,d]->[f,a,c,d]]->[h,a,c,f]]+[[e,a,i]+[g,i,c]->[i,a,e,c,g]]->[i,e,f,g,h]";
+    const tree = new Tree(input); 
+    const unorderedTree = tree.getRoot();
+    setTree(tree);
+    const { nodes, edges } = buildVisualizationTree(unorderedTree);
+    let newIndexSizes = {};
+    newIndexSizes = handleInpuSizeChange(nodes, newIndexSizes);
+
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setNodes1(nodes);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    setEdges1(edges);
+
+    
     tree.updateIndexSizes(indexSizes);
 
-    //const reorderedTree = tree.reorder();
+    const reorderedTree = tree.reorder();
+    console.log(reorderedTree);
 
 
 
@@ -174,7 +189,7 @@ const EinsumTreeVisualizer = () => {
               </button>
             </div>
             <HistoryPanel history={history} onSelectTree={selectTreeFromHistory} />
-            <IndexSizeInput indexSizes={indexSizes} setIndexSizes={setIndexSizes} />
+            <IndexSizeInput indexSizes={indexSizes} setIndexSizes={setIndexSizes} onUpdate={handleTreeUpdate} />
             {selectedNode && (
               <CollapsiblePanel title="Selected Node Data">
                 <p><span className="font-medium">ID:</span> {selectedNode.id}</p>

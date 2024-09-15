@@ -1,7 +1,7 @@
 import React from 'react';
 import CollapsiblePanel from './CollapsiblePanel';
 
-const IndexSizeInput = ({ indexSizes, setIndexSizes }) => {
+const IndexSizeInput = ({ indexSizes, setIndexSizes, onUpdate }) => {
   const handleInputChange = (index, value) => {
     const numValue = parseInt(value, 10);
     setIndexSizes(prev => ({ ...prev, [index]: isNaN(numValue) ? 0 : numValue }));
@@ -23,6 +23,12 @@ const IndexSizeInput = ({ indexSizes, setIndexSizes }) => {
           </div>
         ))}
       </div>
+      <button 
+        onClick={onUpdate} 
+        className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+      >
+        Update Tree
+      </button>
     </CollapsiblePanel>
   );
 };

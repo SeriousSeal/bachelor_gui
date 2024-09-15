@@ -254,7 +254,6 @@ export class Tree {
     console.log(lNode);
 
     if (!lNode || !lNode.left || !lNode.right) {
-      console.error('reorder: Invalid node structure', lNode);
       return this.root;
     }
 
