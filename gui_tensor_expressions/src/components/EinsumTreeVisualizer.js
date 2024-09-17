@@ -190,7 +190,7 @@ const EinsumTreeVisualizer = () => {
                   {selectedNode && (
                     <CollapsiblePanel title="Selected Node Data">                      
                       <p><span className="font-medium">Tensor:</span> {selectedNode.data.label}</p>
-                      <p><span className="font-medium">Tensor Size:</span> {tensorSizes(selectedNode.data.label)}</p>
+                      <p><span className="font-medium">Tensor Size:</span> {tensorSizes(selectedNode.data.label)} {sizeUnit} </p>
                       <p><span className="font-medium">Position:</span> x: {selectedNode.position.x}, y: {selectedNode.position.y}</p>
                     </CollapsiblePanel>
                   )}
