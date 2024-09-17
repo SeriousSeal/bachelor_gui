@@ -12,38 +12,22 @@ import {
   addEdge,
   useNodesState, 
   useEdgesState,
-  
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-
-
-const initialNodesTree2 = [
-  { id: '2-1', type: 'custom', data: { label: 'X' }, position: { x: 0, y: 0 } },
-  { id: '2-2', type: 'custom', data: { label: 'Y' }, position: { x: -100, y: 100 } },
-  { id: '2-3', type: 'custom', data: { label: 'Z' }, position: { x: 100, y: 100 } },
-];
-
-const initialEdgesTree2 = [
-  { id: 'e2-1-2', source: '2-1', target: '2-2', type: 'step' },
-  { id: 'e2-1-3', source: '2-1', target: '2-3', type: 'step' },
-];
-
-
 
 const EinsumTreeVisualizer = () => {
   const [nodes1, setNodes1, onNodesChange1] = useNodesState();
   const [edges1, setEdges1, onEdgesChange1] = useEdgesState();
-  const [nodes2, setNodes2, onNodesChange2] = useNodesState(initialNodesTree2);
-  const [edges2, setEdges2, onEdgesChange2] = useEdgesState(initialEdgesTree2);
   const [einsumExpression, setEinsumExpression] = useState('');
   const [selectedNode, setSelectedNode] = useState(null);  
   const [tree, setTree] = useState(null);
   const [indexSizes, setIndexSizes] = useState({});
   const [history, setHistory] = useState([]);
+  const [dataType, setDataType] = useState('4'); // Default data type  
+  const [sizeUnit, setSizeUnit] = useState('KiB'); // Default size unit
 
-  const fitViewFunctions = useRef({ tree1: null, tree2: null });
+  const fitViewFunctions = useRef({ tree1: null });
   const onConnect1 = useCallback((params) => setEdges1((eds) => addEdge(params, eds)), [setEdges1]);
-  const onConnect2 = useCallback((params) => setEdges2((eds) => addEdge(params, eds)), [setEdges2]);
 
   const handleEinsumInputChange = (event) => {
     setEinsumExpression(event.target.value);
@@ -56,11 +40,23 @@ const EinsumTreeVisualizer = () => {
 
   const handleTreeUpdate = () => {
     // Create a new tree instance with updated sizes 
-    console.log(tree)
+    console.log(tree);
     tree.updateIndexSizes(indexSizes);
   };
 
-  const handleInpuSizeChange = (nodes, newIndexSizes) => {
+
+  const parseInput = (einsumExpression) => {
+    const input = einsumExpression || "[[h,d]+[[f,b]+[a,b,c,d]->[f,a,c,d]]->[h,a,c,f]]+[[e,a,i]+[g,i,c]->[i,a,e,c,g]]->[i,e,f,g,h]";
+    const tree = new Tree(input); 
+    const unorderedTree = tree.getRoot();
+    setTree(tree);
+    const { nodes, edges } = buildVisualizationTree(unorderedTree);
+
+    setNodes1(nodes);
+    setEdges1(edges);
+
+    let newIndexSizes = {};
+    // Update index sizes
     nodes.forEach(node => {
       if (node.data && node.data.label) {
         for (const indice of node.data.label) {
@@ -71,56 +67,35 @@ const EinsumTreeVisualizer = () => {
       }
     });
     setIndexSizes(newIndexSizes);
-    return newIndexSizes;
-  };
-
-
-  const parseInput = (einsumExpression) => {
-    const input = einsumExpression || "[[h,d]+[[f,b]+[a,b,c,d]->[f,a,c,d]]->[h,a,c,f]]+[[e,a,i]+[g,i,c]->[i,a,e,c,g]]->[i,e,f,g,h]";
-    const tree = new Tree(input); 
-    const unorderedTree = tree.getRoot();
-    setTree(tree);
-    const { nodes, edges } = buildVisualizationTree(unorderedTree);
-    let newIndexSizes = {};
-    newIndexSizes = handleInpuSizeChange(nodes, newIndexSizes);
-
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    setNodes1(nodes);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    setEdges1(edges);
-
     
-    tree.updateIndexSizes(indexSizes);
-
-    const reorderedTree = tree.reorder();
-    console.log(reorderedTree);
-
-
-
-
-    // Check if the expression already exists in history
+    // Update history
     setHistory(prevHistory => {
       const newItem = { expression: input, nodes, edges, indexSizes: newIndexSizes };
       const existingIndex = prevHistory.findIndex(item => item.expression === input);
       
       let updatedHistory;
       if (existingIndex !== -1) {
-        // If it exists, remove it from its current position
         updatedHistory = [
           newItem,
           ...prevHistory.slice(0, existingIndex),
           ...prevHistory.slice(existingIndex + 1)
         ];
       } else {
-        // If it's new, add it to the beginning
         updatedHistory = [newItem, ...prevHistory];
       }
       
-      // Keep only the last 5 entries
       return updatedHistory.slice(0, 5);
     });
     
-    setTimeout(() => fitView('tree1'), 0)
+    setTimeout(() => fitView('tree1'), 0);
+  };
+
+  const handleDataTypeChange = (event) => {
+    setDataType(event.target.value);
+  };
+
+  const handleSizeUnitChange = (event) => {
+    setSizeUnit(event.target.value);
   };
 
   const selectTreeFromHistory = (item) => {
@@ -129,11 +104,38 @@ const EinsumTreeVisualizer = () => {
     setIndexSizes(item.indexSizes);
     setEinsumExpression(item.expression);
     setTimeout(() => fitView('tree1'), 0);
-  };
+    };
 
   const fitView = (tree) => {
     fitViewFunctions.current[tree]?.();
   };
+
+  const tensorSizes = (data) => {
+    console.log(data);
+    console.log(dataType);
+    console.log(sizeUnit);
+    let size = 0;
+    if (dataType === '4') {
+      size = 4;
+    } else if (dataType === '8') {
+      size = 8;
+    }
+
+    data.forEach(indice => {
+      if (indexSizes[indice]) {
+        size *= indexSizes[indice];
+      }
+    });
+
+    if (sizeUnit === 'KiB') {
+      size /= 1024;
+    }
+    if (sizeUnit === 'MiB') {
+      size /= 1024 * 1024;
+    }
+
+    return size;
+  }
 
   return (
     <div className="h-screen bg-gray-50">
@@ -141,7 +143,7 @@ const EinsumTreeVisualizer = () => {
         <Panel defaultSize={50} minSize={20}>
           <div className="h-full border border-gray-200 rounded-lg overflow-hidden shadow-lg">
             <PanelGroup direction="vertical">
-              <Panel defaultSize={50} minSize={10}>
+              <Panel defaultSize={70} minSize={10}>
                 <ReactFlowProvider>
                   <Flow
                     nodes={nodes1}
@@ -155,17 +157,44 @@ const EinsumTreeVisualizer = () => {
                 </ReactFlowProvider>
               </Panel>
               <CustomPanelResizeHandle />
-              <Panel minSize={10}>
-                <ReactFlowProvider>
-                  <Flow
-                    nodes={nodes2}
-                    edges={edges2}
-                    onNodesChange={onNodesChange2}
-                    onEdgesChange={onEdgesChange2}
-                    onConnect={onConnect2}                  
-                    fitViewFunction={(fn) => (fitViewFunctions.current.tree2 = fn)}
-                  />
-                </ReactFlowProvider>
+              <Panel minSize={10}>             
+              <div className="p-4 bg-white rounded-lg shadow-lg mb-4"> 
+                  <div className="flex flex-col">
+                    <div className="flex items-center mb-4">
+                      <div className="mr-4 flex-1">
+                        <h3 className="text-lg font-semibold">Select Data Type:</h3>
+                        <select
+                          value={dataType}
+                          onChange={handleDataTypeChange}
+                          className="mt-1 block w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="4">4 Bytes</option>
+                          <option value="8">8 Bytes</option>
+                        </select>
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-semibold">Select Size Unit:</h3>
+                        <select
+                          value={sizeUnit}
+                          onChange={handleSizeUnitChange}
+                          className="mt-1 block w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="KiB">KiB</option>
+                          <option value="MiB">MiB</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-4 bg-white rounded-lg shadow-lg">
+                  {selectedNode && (
+                    <CollapsiblePanel title="Selected Node Data">                      
+                      <p><span className="font-medium">Tensor:</span> {selectedNode.data.label}</p>
+                      <p><span className="font-medium">Tensor Size:</span> {tensorSizes(selectedNode.data.label)}</p>
+                      <p><span className="font-medium">Position:</span> x: {selectedNode.position.x}, y: {selectedNode.position.y}</p>
+                    </CollapsiblePanel>
+                  )}
+                </div>
               </Panel>
             </PanelGroup>
           </div>
@@ -190,14 +219,6 @@ const EinsumTreeVisualizer = () => {
             </div>
             <HistoryPanel history={history} onSelectTree={selectTreeFromHistory} />
             <IndexSizeInput indexSizes={indexSizes} setIndexSizes={setIndexSizes} onUpdate={handleTreeUpdate} />
-            {selectedNode && (
-              <CollapsiblePanel title="Selected Node Data">
-                <p><span className="font-medium">ID:</span> {selectedNode.id}</p>
-                <p><span className="font-medium">Type:</span> {selectedNode.type}</p>
-                <p><span className="font-medium">Position:</span> x: {selectedNode.position.x}, y: {selectedNode.position.y}</p>
-                <p><span className="font-medium">Data:</span> {JSON.stringify(selectedNode.data)}</p>
-              </CollapsiblePanel>
-            )}
           </div>
         </Panel>
       </PanelGroup>

@@ -85,9 +85,7 @@ function reorderBinaryLeadingM(iStringInLeft, iStringInRight, iStringOut, iSizes
   lK = [...iStringInLeft].filter(lX => lK.includes(lX));
 
   // Derive sizes
-  console.log(iStringInLeft, iStringInRight, iSizesInLeft, iSizesInRight, lC, lM, lN, lK);
   let [, , , lSk] = sizesDims(iStringInLeft, iStringInRight, iSizesInLeft, iSizesInRight, lC, lM, lN, lK);
-  console.log(lSk);
 
   // TODO: dummy cb
   let lCb = '';
@@ -251,7 +249,6 @@ export class Tree {
 
   reorder(iNode = null) {
     let lNode = iNode === null ? this.root : iNode;
-    console.log(lNode);
 
     if (!lNode || !lNode.left || !lNode.right) {
       return this.root;
