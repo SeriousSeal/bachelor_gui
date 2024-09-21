@@ -52,7 +52,6 @@ const buildVisualizationTree = (root) => {
       if (!node) return;
   
       const currentId = `${idCounter++}`;
-      console.log(node)
   
       nodes.push({
         id: currentId,

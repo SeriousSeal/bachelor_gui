@@ -12,6 +12,7 @@ import {
   addEdge,
   useNodesState, 
   useEdgesState,
+  useReactFlow
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 
@@ -26,6 +27,8 @@ const EinsumTreeVisualizer = () => {
   const [dataType, setDataType] = useState('4'); // Default data type  
   const [sizeUnit, setSizeUnit] = useState('KiB'); // Default size unit
 
+
+
   const fitViewFunctions = useRef({ tree1: null });
   const onConnect1 = useCallback((params) => setEdges1((eds) => addEdge(params, eds)), [setEdges1]);
 
@@ -34,19 +37,17 @@ const EinsumTreeVisualizer = () => {
   };
 
   const onNodeClick = useCallback((event, node) => {
-    console.log('Node clicked:', node);
     setSelectedNode(node);
   }, []);
 
-  const handleTreeUpdate = () => {
-    // Create a new tree instance with updated sizes 
-    console.log(tree);
+  const handleTreeUpdate = (indexSizes) => {
     tree.updateIndexSizes(indexSizes);
   };
 
 
   const parseInput = (einsumExpression) => {
-    const input = einsumExpression || "[[h,d]+[[f,b]+[a,b,c,d]->[f,a,c,d]]->[h,a,c,f]]+[[e,a,i]+[g,i,c]->[i,a,e,c,g]]->[i,e,f,g,h]";
+    
+    const input = einsumExpression || "[[i,e,a],[i,c,g]->[i,e,a,c,g]],[[[a,b,c,d],[b,f]->[a,f,c,d]],[d,h]->[a,f,c,h]]->[i,e,f,g,h]";
     const tree = new Tree(input); 
     const unorderedTree = tree.getRoot();
     setTree(tree);
@@ -111,9 +112,6 @@ const EinsumTreeVisualizer = () => {
   };
 
   const tensorSizes = (data) => {
-    console.log(data);
-    console.log(dataType);
-    console.log(sizeUnit);
     let size = 0;
     if (dataType === '4') {
       size = 4;
@@ -151,7 +149,8 @@ const EinsumTreeVisualizer = () => {
                     onNodesChange={onNodesChange1}
                     onEdgesChange={onEdgesChange1}
                     onConnect={onConnect1}
-                    onNodeClick={onNodeClick}                  
+                    onNodeClick={onNodeClick}
+                    tree={tree}
                     fitViewFunction={(fn) => (fitViewFunctions.current.tree1 = fn)}
                   />
                 </ReactFlowProvider>
