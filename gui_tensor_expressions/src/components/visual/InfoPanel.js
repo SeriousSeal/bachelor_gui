@@ -42,7 +42,7 @@ const checkOccurrenceLast = (letter, node, left, right) => {
     let cloneLeft = cloneDeep(left);
     let cloneRight = cloneDeep(right);
     const dimtypes = createDimTypes();
-    let tempFirst, tempSecond = false;
+    let tempFirst, tempSecond, tempThird = false;
     
   
     for (let i = node.length - 1; i >= 0; i--) {
@@ -60,24 +60,30 @@ const checkOccurrenceLast = (letter, node, left, right) => {
         cloneNode.pop();
         cloneLeft.pop();
       }
-      else if (inNode && !inLeft && inRight ) {
+      else if (!tempThird) {
         tempSecond = true;
+        tempThird = true;
+        while (cloneLeft?.length > 0 && cloneRight?.length > 0) {
+          if (cloneLeft[cloneLeft.length - 1] === cloneRight[cloneRight.length - 1]) {
+            const el = cloneLeft.pop();
+            cloneRight.pop();
+            dimtypes.primitive.kb.push(el);
+          } else {
+            break;
+          }
+        }
+        i++;
+      }
+      else if (inNode && !inLeft && inRight ) {
         dimtypes.primitive.nb.push(element);
         cloneNode.pop();
         cloneRight.pop();
       }
+      else break;
     }
   
     //check for kb
-    while (cloneLeft?.length > 0 && cloneRight?.length > 0) {
-      if (cloneLeft[cloneLeft.length - 1] === cloneRight[cloneRight.length - 1]) {
-        const el = cloneLeft.pop();
-        cloneRight.pop();
-        dimtypes.primitive.kb.push(el);
-      } else {
-        break;
-      }
-    }
+   
   
     cloneLeft?.reverse().forEach(element => {
       const {inNode, inLeft, inRight} = checkOccurrence(element, cloneNode, cloneLeft, cloneRight);
