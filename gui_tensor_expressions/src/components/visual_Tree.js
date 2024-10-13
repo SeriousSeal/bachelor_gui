@@ -56,8 +56,13 @@ const buildVisualizationTree = (root) => {
       nodes.push({
         id: currentId,
         type: 'custom',
-        data: { label: node.value},
+        data: { 
+          label: node.value,
+          left: node.left?.value,
+          right: node.right?.value
+        },
         position: { x: node.x, y: node.y }
+        
       });
   
       if (parentId !== null) {

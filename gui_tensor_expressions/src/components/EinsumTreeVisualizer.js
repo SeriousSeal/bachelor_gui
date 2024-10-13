@@ -7,12 +7,12 @@ import IndexSizeInput from './visual/IndexSizeInput';
 import CollapsiblePanel from './visual/CollapsiblePanel';
 import CustomPanelResizeHandle from './visual/CustomPanelResizeHandle';
 import buildVisualizationTree from './visual_Tree';
+import { calculateTotalOperations, dimensionTypes, calculateOperations } from './dimsAndOps';
 import { 
   ReactFlowProvider,
   addEdge,
   useNodesState, 
-  useEdgesState,
-  useReactFlow
+  useEdgesState
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 
@@ -26,8 +26,8 @@ const EinsumTreeVisualizer = () => {
   const [history, setHistory] = useState([]);
   const [dataType, setDataType] = useState('4'); // Default data type  
   const [sizeUnit, setSizeUnit] = useState('KiB'); // Default size unit
-
-
+  const [totalOperations, setTotalOperations] = useState(0);
+  const [selectedNodeOperations, setSelectedNodeOperations] = useState(0);
 
   const fitViewFunctions = useRef({ tree1: null });
   const onConnect1 = useCallback((params) => setEdges1((eds) => addEdge(params, eds)), [setEdges1]);
@@ -38,7 +38,14 @@ const EinsumTreeVisualizer = () => {
 
   const onNodeClick = useCallback((event, node) => {
     setSelectedNode(node);
-  }, []);
+    if (node.data && node.data.left && node.data.right) {
+      const dimtypes = dimensionTypes(node.data.label, node.data.left, node.data.right);
+      const ops = calculateOperations(dimtypes, indexSizes);
+      setSelectedNodeOperations(ops);
+    } else {
+      setSelectedNodeOperations(0);
+    }
+  }, [indexSizes]);
 
   const handleTreeUpdate = (indexSizes) => {
     tree.updateIndexSizes(indexSizes);
@@ -87,6 +94,10 @@ const EinsumTreeVisualizer = () => {
       
       return updatedHistory.slice(0, 5);
     });
+
+    // Calculate total operations
+    const totalOps = calculateTotalOperations(newIndexSizes, tree);
+    setTotalOperations(totalOps);
     
     setTimeout(() => fitView('tree1'), 0);
   };
@@ -111,29 +122,59 @@ const EinsumTreeVisualizer = () => {
     fitViewFunctions.current[tree]?.();
   };
 
-  const tensorSizes = (data) => {
-    let size = 0;
-    if (dataType === '4') {
-      size = 4;
-    } else if (dataType === '8') {
-      size = 8;
-    }
 
-    data.forEach(indice => {
-      if (indexSizes[indice]) {
-        size *= indexSizes[indice];
+  const calculateStrides = (indices) => {
+    if (!Array.isArray(indices)) return [];
+    
+    let stride = 1;
+    const strides = new Array(indices.length).fill(0);
+    
+    for (let i = indices.length - 1; i >= 0; i--) {
+      strides[i] = stride;
+      stride *= Math.max(1, Math.floor(indexSizes[indices[i]] || 1));
+    }
+    
+    return strides;
+  };
+
+  const renderIndices = (indices) => {
+    if (!Array.isArray(indices)) return null;
+    
+    const strides = calculateStrides(indices);
+    
+    return indices.map((index, i) => (
+      <div key={i} className="flex  mr-4 ">
+        <span className="text-xl mr-2">{index}</span>
+        <span className="text-lg text-gray-600">
+          = {strides[i] === 1 ? 'unit' : strides[i]}
+        </span>
+      </div>
+    ));
+  };
+
+  const formatSize = (size) => {
+    if (sizeUnit === 'MiB') {
+      return `${Number((size / (1024 * 1024)).toFixed(2)).toLocaleString()} MiB`;
+    } else if (sizeUnit === 'KiB') {
+      return `${Number((size / 1024).toFixed(2)).toLocaleString()} KiB`;
+    } else {
+      return `${Number(size.toFixed(2)).toLocaleString()} Bytes`;
+    }
+  };
+
+  const tensorSizes = (indices) => {
+    if (!Array.isArray(indices)) return 0;
+
+    let size = dataType === '4' ? 4 : 8; // Base size in bytes
+
+    indices.forEach(index => {
+      if (indexSizes[index]) {
+        size *= Math.max(1, Math.floor(indexSizes[index]));
       }
     });
 
-    if (sizeUnit === 'KiB') {
-      size /= 1024;
-    }
-    if (sizeUnit === 'MiB') {
-      size /= 1024 * 1024;
-    }
-
     return size;
-  }
+  };
 
   return (
     <div className="h-screen bg-gray-50">
@@ -157,7 +198,7 @@ const EinsumTreeVisualizer = () => {
               </Panel>
               <CustomPanelResizeHandle />
               <Panel minSize={10}>             
-              <div className="p-4 bg-white rounded-lg shadow-lg mb-4"> 
+              <div className="p-4 bg-white rounded-lg shadow-lg mb-4 h-full overflow-y-auto"> 
                   <div className="flex flex-col">
                     <div className="flex items-center mb-4">
                       <div className="mr-4 flex-1">
@@ -184,13 +225,23 @@ const EinsumTreeVisualizer = () => {
                       </div>
                     </div>
                   </div>
-                </div>
-                <div className="p-4 bg-white rounded-lg shadow-lg">
+                  <p className="text-lg mb-2">
+                    <span className="font-medium">Total Operations:</span> {totalOperations.toLocaleString()}
+                  </p>
                   {selectedNode && (
-                    <CollapsiblePanel title="Selected Node Data">                      
-                      <p><span className="font-medium">Tensor:</span> {selectedNode.data.label}</p>
-                      <p><span className="font-medium">Tensor Size:</span> {tensorSizes(selectedNode.data.label)} {sizeUnit} </p>
-                      <p><span className="font-medium">Position:</span> x: {selectedNode.position.x}, y: {selectedNode.position.y}</p>
+                    <CollapsiblePanel title="Selected Node Data">
+                      <div className="text-lg mb-2 flex flex-wrap">
+                        <span className="font-medium">Indices and Stride:&nbsp;</span>
+                        {renderIndices(selectedNode.data.label)}
+                      </div>
+                      <div className="text-lg mb-2">
+                        <span className="font-medium">Tensor Size:&nbsp;</span>
+                        {formatSize(tensorSizes(selectedNode.data.label))}
+                      </div>
+                      <div className="text-lg mb-2">
+                        <span className="font-medium">Node Operations:&nbsp;</span>
+                        {selectedNodeOperations.toLocaleString()}
+                      </div>
                     </CollapsiblePanel>
                   )}
                 </div>

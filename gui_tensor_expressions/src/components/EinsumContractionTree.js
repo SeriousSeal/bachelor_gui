@@ -1,4 +1,3 @@
-import { identifyDims, sizesDims } from './helperFunctions.js';
 import { Toast } from './visual/toast.js';
 
 function isLetterOrNumber(char) {

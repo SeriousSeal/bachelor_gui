@@ -1,13 +1,11 @@
-import React, { useMemo, useEffect, useState, useCallback, useRef } from 'react';
-import { cloneDeep, isEqual } from "lodash"; 
+import React, { useEffect, useState, useCallback, useRef } from 'react';
 import InfoPanel from './InfoPanel';
 import ReactFlow, {
     Background, 
     Controls,
     Handle,
     Position,
-    useReactFlow,
-    ReactFlowProvider
+    useReactFlow
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 
@@ -164,7 +162,7 @@ const Flow = ({ nodes, edges, onNodesChange, onEdgesChange, onConnect, onNodeCli
 
     
       // Get viewport dimensions using getBoundingClientRect
-      const { width: viewportWidth, height: viewportHeight } = document.documentElement.getBoundingClientRect();
+      const { width: viewportWidth, height: _ } = document.documentElement.getBoundingClientRect();
     
       // Check if positions fit in the viewport
       const fitsLeft = leftPosition.x >= 0; // Must not overflow the left boundary

@@ -1,160 +1,27 @@
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import MiniReactFlowTree from './MiniReactFlowTree';
+import { dimensionTypes } from '../dimsAndOps';
 
-import { cloneDeep, isEqual } from "lodash"; 
-
-
-const createDimTypes = () => {
-    return {
-      primitive: {
-        cb: [],
-        mb: [],
-        nb: [],
-        kb: []
-      },
-      loop: {
-        bc: [],
-        bm: [],
-        bn: [],
-        bk: []
-      }
-    };
-  }
-  
-
-const checkOccurrenceLast = (letter, node, left, right) => {
-    const inNode = node.at(-1) === letter;
-    const inLeft = left?.at(-1) === letter || false;
-    const inRight = right?.at(-1) === letter || false;
-    return { inNode, inLeft, inRight };
-  };
-  
-  const checkOccurrence = (letter, node, left, right) => {
-    const inNode = node.includes(letter);
-    const inLeft = left?.includes(letter) || false;
-    const inRight = right?.includes(letter) || false;
-    return { inNode, inLeft, inRight };
-  };
-  
-  
-  const dimensionTypes = (node, left, right) => {
-    let cloneNode = cloneDeep(node);
-    let cloneLeft = cloneDeep(left);
-    let cloneRight = cloneDeep(right);
-    const dimtypes = createDimTypes();
-    let tempFirst, tempSecond, tempThird = false;
-    
-  
-    for (let i = node.length - 1; i >= 0; i--) {
-      const element = node[i];
-      const {inNode, inLeft, inRight} = checkOccurrenceLast(element, cloneNode, cloneLeft, cloneRight);
-      if (inNode && inLeft && inRight && !tempFirst) {
-        dimtypes.primitive.cb.push(element);
-        cloneNode.pop();
-        cloneLeft.pop();
-        cloneRight.pop();
-      }
-      else if (inNode && inLeft && !inRight && !tempSecond) {
-        tempFirst = true;
-        dimtypes.primitive.mb.push(element);
-        cloneNode.pop();
-        cloneLeft.pop();
-      }
-      else if (!tempThird) {
-        tempSecond = true;
-        tempThird = true;
-        while (cloneLeft?.length > 0 && cloneRight?.length > 0) {
-          if (cloneLeft[cloneLeft.length - 1] === cloneRight[cloneRight.length - 1]) {
-            const el = cloneLeft.pop();
-            cloneRight.pop();
-            dimtypes.primitive.kb.push(el);
-          } else {
-            break;
-          }
-        }
-        i++;
-      }
-      else if (inNode && !inLeft && inRight ) {
-        dimtypes.primitive.nb.push(element);
-        cloneNode.pop();
-        cloneRight.pop();
-      }
-      else break;
-    }
-  
-    //check for kb
-   
-  
-    cloneLeft?.reverse().forEach(element => {
-      const {inNode, inLeft, inRight} = checkOccurrence(element, cloneNode, cloneLeft, cloneRight);
-  
-      if (inNode && inLeft && inRight) {
-        dimtypes.loop.bc.push(element);
-        cloneNode=cloneNode.filter(item => item !== element);
-        cloneLeft=cloneLeft.filter(item => item !== element);
-        cloneRight=cloneRight.filter(item => item !== element);
-      }
-      if (inNode && inLeft && !inRight) {
-        dimtypes.loop.bm.push(element);
-        cloneNode=cloneNode.filter(item => item !== element);
-        cloneLeft=cloneLeft.filter(item => item !== element);
-      }
-      if (!inNode && inLeft && inRight) {
-        dimtypes.loop.bk.push(element);
-        cloneLeft=cloneLeft.filter(item => item !== element);
-        cloneRight=cloneRight.filter(item => item !== element);
-      }
-    });
-    cloneRight?.reverse().forEach(element => {
-      const {inNode, inLeft, inRight} = checkOccurrence(element, cloneNode, cloneLeft, cloneRight);
-  
-      if (inNode && inLeft && inRight) {
-        dimtypes.loop.bc.push(element);
-        cloneNode=cloneNode.filter(item => item !== element);
-        cloneLeft=cloneLeft.filter(item => item !== element);
-        cloneRight=cloneRight.filter(item => item !== element);
-      }
-      if (inNode && !inLeft && inRight) {
-        dimtypes.loop.bn.push(element);
-        cloneNode=cloneNode.filter(item => item !== element);
-        cloneRight=cloneRight.filter(item => item !== element);
-      }
-      if (!inNode && inLeft && inRight) {
-        dimtypes.loop.bk.push(element);
-        cloneLeft=cloneLeft.filter(item => item !== element);
-        cloneRight=cloneRight.filter(item => item !== element);
-      }
-    });
-    return dimtypes
-  }
-  
+import {isEqual } from "lodash"; 
 
 const InfoPanel = ({ node, connectedNodes, onSwapChildren, onShowContraction, onClose, initialPosition }) => {
     const [position, setPosition] = useState(initialPosition);
     const [isDragging, setIsDragging] = useState(false);
     const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
     const panelRef = useRef(null);
-    const renderCountRef = useRef(0);
     const prevConnectedNodesRef = useRef(connectedNodes);
   
     useEffect(() => {
-      console.log('InfoPanel rendered. Count:', ++renderCountRef.current);
       
       if (!isEqual(prevConnectedNodesRef.current, connectedNodes)) {
-        console.log('connectedNodes changed:', {
-          prev: prevConnectedNodesRef.current,
-          current: connectedNodes
-        });
         prevConnectedNodesRef.current = connectedNodes;
       }
   
-      return () => console.log('InfoPanel will update. Count:', renderCountRef.current);
+      return;
     });
   
     const dimTypes = useMemo(() => {
-      console.log('Calculating dimTypes...');
       const result = dimensionTypes(connectedNodes.value, connectedNodes.left?.value, connectedNodes.right?.value);
-      console.log('Calculated dimTypes:', result);
       return result;
     }, [connectedNodes]);
   
@@ -239,14 +106,14 @@ const InfoPanel = ({ node, connectedNodes, onSwapChildren, onShowContraction, on
       }
     };
   
-    const handleMouseMove = (e) => {
+    const handleMouseMove = useCallback((e) => {
       if (isDragging) {
         setPosition({
           x: e.clientX - dragOffset.x,
           y: e.clientY - dragOffset.y,
         });
       }
-    };
+    }, [isDragging, dragOffset]);
   
     const handleMouseUp = () => {
       setIsDragging(false);
@@ -264,7 +131,7 @@ const InfoPanel = ({ node, connectedNodes, onSwapChildren, onShowContraction, on
         window.removeEventListener('mousemove', handleMouseMove);
         window.removeEventListener('mouseup', handleMouseUp);
       };
-    }, [isDragging]);
+    }, [isDragging, handleMouseMove]);
   
     return (
       <div 
@@ -318,10 +185,6 @@ const InfoPanel = ({ node, connectedNodes, onSwapChildren, onShowContraction, on
                   const loopKey = `b${type.toLowerCase()}`;
                   const primitiveData = dimTypes.primitive[primitiveKey] || [];
                   const loopData = dimTypes.loop[loopKey] || [];
-                  console.log(`Rendering row ${type}:`, {
-                    primitive: primitiveData,
-                    loop: loopData
-                  });
                   return (
                     <tr key={type} style={{ backgroundColor: index % 2 === 0 ? '#f9f9f9' : 'white' }}>
                       <td style={cellStyle}>{type}</td>
