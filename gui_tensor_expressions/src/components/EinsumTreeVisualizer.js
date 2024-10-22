@@ -69,7 +69,7 @@ const EinsumTreeVisualizer = () => {
       if (node.data && node.data.label) {
         for (const indice of node.data.label) {
           if (!newIndexSizes[indice]) {
-            newIndexSizes[indice] = 10; // Default size, adjust as needed
+            newIndexSizes[indice] = 2; // Default size, adjust as needed
           }
         }
       }

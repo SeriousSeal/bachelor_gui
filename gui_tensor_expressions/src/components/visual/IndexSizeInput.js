@@ -1,9 +1,15 @@
-import React, { useState } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs.tsx";
+import React, { useState, useEffect } from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import CollapsiblePanel from './CollapsiblePanel';
 
 const IndexSizeInput = ({ indexSizes, setIndexSizes, onUpdate }) => {
   const [bulkInput, setBulkInput] = useState('');
+
+  // Initialize and update bulk input whenever indexSizes changes
+  useEffect(() => {
+    const values = Object.values(indexSizes).join(', ');
+    setBulkInput(values);
+  }, [indexSizes]);
 
   const handleInputChange = (index, value) => {
     const numValue = parseInt(value, 10);
@@ -80,23 +86,27 @@ const IndexSizeInput = ({ indexSizes, setIndexSizes, onUpdate }) => {
         </TabsContent>
 
         <TabsContent value="bulk">
-          <div className="space-y-4">
-            <div>
-              <label className="block mb-2 text-sm font-medium">
-                Enter all sizes (comma or space separated):
-              </label>
-              <input
-                type="text"
-                value={bulkInput}
-                onChange={handleBulkInputChange}
-                placeholder="e.g., 2,3,4 or 2 3 4"
-                className="w-full p-2 border border-gray-300 rounded-md"
-              />
-            </div>
-            <div className="text-sm text-gray-500">
-              Current indices: {Object.keys(indexSizes).join(', ')}
-            </div>
-          </div>
+        <div className="space-y-4">
+          {Object.keys(indexSizes).length > 0 && (
+            <>
+              <div>
+                <label className="block mb-2 text-sm font-medium">
+                  Enter all sizes (comma or space separated):
+                </label>
+                <input
+                  type="text"
+                  value={bulkInput}
+                  onChange={handleBulkInputChange}
+                  placeholder="e.g., 2,3,4 or 2 3 4"
+                  className="w-full p-2 border border-gray-300 rounded-md"
+                />
+              </div>
+              <div className="text-sm text-gray-500">
+                Current indices: {Object.keys(indexSizes).join(', ')}
+              </div>
+            </>
+          )}
+        </div>
         </TabsContent>
       </Tabs>
 
