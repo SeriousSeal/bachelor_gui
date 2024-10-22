@@ -4,16 +4,24 @@
   "homepage": "https://seriousseal.github.io/bachelor_gui",
   "private": true,
   "dependencies": {
+    "@radix-ui/react-hover-card": "^1.1.2",
+    "@radix-ui/react-menubar": "^1.1.2",
+    "@radix-ui/react-slot": "^1.1.0",
+    "@radix-ui/react-tabs": "^1.1.1",
     "@testing-library/jest-dom": "^5.17.0",
     "@testing-library/react": "^13.4.0",
     "@testing-library/user-event": "^13.5.0",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.1",
     "framer-motion": "^11.3.31",
+    "lucide-react": "^0.453.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-flow-renderer": "^10.3.17",
     "react-resizable-panels": "^2.1.2",
     "react-scripts": "^5.0.1",
-    "reactflow": "^11.11.4"
+    "reactflow": "^11.11.4",
+    "tailwind-merge": "^2.5.4"
   },
   "scripts": {
     "start": "react-scripts start",
@@ -42,6 +50,7 @@
     ]
   },
   "devDependencies": {
+    "@shadcn/ui": "^0.0.4",
     "autoprefixer": "^10.4.20",
     "gh-pages": "^6.1.1",
     "postcss": "^8.4.45",

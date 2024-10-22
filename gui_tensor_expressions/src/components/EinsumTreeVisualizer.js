@@ -225,9 +225,6 @@ const EinsumTreeVisualizer = () => {
                       </div>
                     </div>
                   </div>
-                  <p className="text-lg mb-2">
-                    <span className="font-medium">Total Operations:</span> {totalOperations.toLocaleString()}
-                  </p>
                   {selectedNode && (
                     <CollapsiblePanel title="Selected Node Data">
                       <div className="text-lg mb-2 flex flex-wrap">
@@ -239,8 +236,8 @@ const EinsumTreeVisualizer = () => {
                         {formatSize(tensorSizes(selectedNode.data.label))}
                       </div>
                       <div className="text-lg mb-2">
-                        <span className="font-medium">Node Operations:&nbsp;</span>
-                        {selectedNodeOperations.toLocaleString()}
+                        <span className="font-medium">Ops/Ops per Tree:&nbsp;</span>
+                        {(selectedNodeOperations*100/totalOperations).toLocaleString()} %
                       </div>
                     </CollapsiblePanel>
                   )}
