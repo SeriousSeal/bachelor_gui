@@ -1,5 +1,12 @@
+
+const path = require('path');
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, 'src'),
+    },
+  },
   darkMode: ["class"],
   content: [
     './pages/**/*.{js,jsx}',

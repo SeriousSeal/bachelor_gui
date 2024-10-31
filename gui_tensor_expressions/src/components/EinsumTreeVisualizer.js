@@ -7,6 +7,7 @@ import IndexSizeInput from './visual/IndexSizeInput';
 import CollapsiblePanel from './visual/CollapsiblePanel';
 import CustomPanelResizeHandle from './visual/CustomPanelResizeHandle';
 import buildVisualizationTree from './visual_Tree';
+import { LayoutOptionType } from './constants';
 import { calculateTotalOperations, dimensionTypes, calculateOperations } from './dimsAndOps';
 import { 
   ReactFlowProvider,
@@ -15,6 +16,8 @@ import {
   useEdgesState
 } from 'reactflow';
 import 'reactflow/dist/style.css';
+
+
 
 const EinsumTreeVisualizer = () => {
   const [nodes1, setNodes1, onNodesChange1] = useNodesState();
@@ -27,7 +30,7 @@ const EinsumTreeVisualizer = () => {
   const [dataType, setDataType] = useState('4'); // Default data type  
   const [sizeUnit, setSizeUnit] = useState('KiB'); // Default size unit
   const [totalOperations, setTotalOperations] = useState(0);
-  const [selectedNodeOperations, setSelectedNodeOperations] = useState(0);
+  const [selectedNodeOperations, setSelectedNodeOperations] = useState(0);  
 
   const fitViewFunctions = useRef({ tree1: null });
   const onConnect1 = useCallback((params) => setEdges1((eds) => addEdge(params, eds)), [setEdges1]);
@@ -57,6 +60,7 @@ const EinsumTreeVisualizer = () => {
     const input = einsumExpression || "[41,10,11],[[9,10,24,25],[[[63,87,11],[81,87,24,25]->[11,24,25,63,81]],[[86,65,63],[[[[77,65,53,70],[70,75,81]->[53,65,75,77,81]],[[53,83,61],[61,75,22,23]->[22,23,53,75,83]]->[22,23,65,77,81,83]],[[[47,8,9],[7,8,22,23]->[7,9,22,23,47]],[[[31,40,41],[[39,40,46,47],[46,6,7]->[6,7,39,40,47]]->[6,7,31,39,41,47]],[[[[54,60,66],[[[59,76,77],[82,76,52,54]->[52,54,59,77,82]],[[85,57,82],[[64,78,85,59],[[79,78,86],[[80,79],[80,58,64]->[58,64,79]]->[58,64,78,86]]->[58,59,85,86]]->[57,58,59,82,86]]->[52,54,57,58,77,86]]->[52,57,58,60,66,77,86]],[[[52,84,71],[[45,4,5],[[3,4,18,19],[71,60,18,19]->[3,4,60,71]]->[3,5,45,60,71]]->[3,5,45,52,60,84]],[[[[33,38,39],[37,38,44,45]->[33,37,39,44,45]],[[32,36,37],[[29,30,32,33],[[26,28,29],[[26,27],[27,30,31]->[26,30,31]]->[28,29,30,31]]->[28,31,32,33]]->[28,31,33,36,37]]->[28,31,36,39,44,45]],[[44,2,3],[[[1,2,16,17],[74,84,16,17]->[1,2,74,84]],[[[28,34,35],[[35,36,42,43],[43,0,1]->[0,1,35,36,42]]->[0,1,28,34,36,42]],[[[42,50,51],[51,0,14,15]->[0,14,15,42,50]],[[[[68,69,12,13],[[58,55,67],[55,48,68]->[48,58,67,68]]->[12,13,48,58,67,69]],[[[67,57,62,72],[72,56,74]->[56,57,62,67,74]],[[62,69,73],[73,56,14,15]->[14,15,56,62,69]]->[14,15,57,67,69,74]]->[12,13,14,15,48,57,58,74]],[[34,48,49],[49,50,12,13]->[12,13,34,48,50]]->[14,15,34,50,57,58,74]]->[0,34,42,57,58,74]]->[1,28,36,57,58,74]]->[2,28,36,57,58,84]]->[3,28,36,44,57,58,84]]->[3,31,39,45,57,58,84]]->[5,31,39,52,57,58,60]]->[5,31,39,66,77,86]],[[5,6,20,21],[66,83,20,21]->[5,6,66,83]]->[6,31,39,77,83,86]]->[7,41,47,77,83,86]]->[9,22,23,41,77,83,86]]->[9,41,65,81,86]]->[9,41,63,81]]->[9,11,24,25,41]]->[10,11,25,41]]->[11,25]";
     const tree = new Tree(input); 
     const unorderedTree = tree.getRoot();
+    if (!unorderedTree) return;
     setTree(tree);
     const { nodes, edges } = buildVisualizationTree(unorderedTree);
 
@@ -99,7 +103,9 @@ const EinsumTreeVisualizer = () => {
     const totalOps = calculateTotalOperations(newIndexSizes, tree);
     setTotalOperations(totalOps);
     
-    setTimeout(() => fitView('tree1'), 0);
+    window.requestAnimationFrame(() => {
+      fitView('tree1');
+    });
   };
 
   const handleDataTypeChange = (event) => {
@@ -115,7 +121,9 @@ const EinsumTreeVisualizer = () => {
     setEdges1(item.edges);
     setIndexSizes(item.indexSizes);
     setEinsumExpression(item.expression);
-    setTimeout(() => fitView('tree1'), 0);
+    window.requestAnimationFrame(() => {
+      fitView('tree1');
+    });
     };
 
   const fitView = (tree) => {
@@ -176,6 +184,30 @@ const EinsumTreeVisualizer = () => {
     return size;
   };
 
+
+  const handleOptionClick = (option) => {
+    switch(option) {
+      case LayoutOptionType.Option1:
+        console.log('Processing Option 1');
+        // Add specific logic for Option 1
+        break;
+      case LayoutOptionType.Option2:
+        console.log('Processing Option 2');
+        // Add specific logic for Option 2
+        break;
+      case LayoutOptionType.Option3:
+        console.log('Processing Option 3');
+        // Add specific logic for Option 3
+        break;
+      case LayoutOptionType.Option4:
+        console.log('Processing Option 4');
+        // Add specific logic for Option 4
+        break;
+      default:
+        console.log('Unknown option selected');
+    }
+  };
+
   return (
     <div className="h-screen bg-gray-50">
       <PanelGroup direction="horizontal" className="h-full">
@@ -193,6 +225,7 @@ const EinsumTreeVisualizer = () => {
                     onNodeClick={onNodeClick}
                     tree={tree}
                     fitViewFunction={(fn) => (fitViewFunctions.current.tree1 = fn)}
+                    handleOptionClick={handleOptionClick}
                   />
                 </ReactFlowProvider>
               </Panel>

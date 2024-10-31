@@ -37,7 +37,7 @@ const InfoPanel = ({ node, connectedNodes, onSwapChildren, onShowContraction, on
       top: `${position.y}px`,
       left: `${position.x}px`,
       zIndex: 10,
-      width: '360px',
+      width: '460px',
       cursor: isDragging ? 'grabbing' : 'grab',
       userSelect: 'none',
       backgroundColor: 'rgba(255, 255, 255, 0.9)',
@@ -49,20 +49,23 @@ const InfoPanel = ({ node, connectedNodes, onSwapChildren, onShowContraction, on
       boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
     };
   
-    const titleStyle = { fontSize: '20px', fontWeight: 'bold', marginBottom: '12px', color: '#333' };
+    const titleStyle = { fontSize: '20px', fontWeight: 'bold', marginBottom: '12px', color: '#333' ,
+      alignItems: "center",};
   
     const letterContainerStyle = {
       display: 'flex',
       flexDirection: 'column',
       justifyContent: 'center',
       marginRight: '16px',
+      marginLeft: '16px',
+      marginTop: '24px',
     };
   
     const letterStyle = {
-      fontSize: '24px',
+      fontSize: '20px',
       fontWeight: 'bold',
       lineHeight: '1.5',
-      marginBottom: '8px',
+      marginBottom: '4px',
     };
   
     const reactFlowPanelStyle = {
@@ -70,6 +73,8 @@ const InfoPanel = ({ node, connectedNodes, onSwapChildren, onShowContraction, on
       alignItems: "center",
       justifyContent: "center",
       marginBottom: '16px',
+      maxWidth: '304px', // Match MiniReactFlowTree container width
+      margin: '0 auto', // Center the flow
     };
   
     const tableStyle = {

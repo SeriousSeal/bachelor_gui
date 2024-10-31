@@ -47,6 +47,12 @@ export function parseTree(str) {
     if (str[index] === '[') {
       index++;
       const left = parse();
+      if (str.slice(index, index + 3) === '->[') {
+        index += 3; // Skip '->'
+        const head = parseArray();
+        index++;
+        return new Node(head, left, null); // Transposition node has only left child
+      }
       if (str.slice(index, index + 2) !== '+[' && str.slice(index, index + 2) !== ',[') {
         console.log(str.slice(index, index + 2));
         throw new Error(`Expected '+[' or ',[' at position ${index}`);
@@ -81,7 +87,6 @@ class Node {
     this.left = left;
     this.right = right;
     this.string = Array.isArray(value) ? value.join('') : value;
-    this.stringCmnk = this.string;
     this.sizes = null;
   }
 

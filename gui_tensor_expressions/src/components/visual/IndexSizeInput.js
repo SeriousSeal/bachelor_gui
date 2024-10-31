@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import CollapsiblePanel from './CollapsiblePanel';
+import { Toast } from './toast.js';
 
 const IndexSizeInput = ({ indexSizes, setIndexSizes, onUpdate }) => {
   const [bulkInput, setBulkInput] = useState('');
@@ -28,7 +29,7 @@ const IndexSizeInput = ({ indexSizes, setIndexSizes, onUpdate }) => {
         const indices = Object.keys(indexSizes);
         
         if (values.length !== indices.length) {
-          alert(`Please provide ${indices.length} values (one for each index)`);
+          Toast.show(`Please provide ${indices.length} values (one for each index)`);
           return;
         }
 
@@ -43,7 +44,7 @@ const IndexSizeInput = ({ indexSizes, setIndexSizes, onUpdate }) => {
 
         setIndexSizes(newSizes);
       } catch (error) {
-        alert(`Error parsing input: ${error.message}`);
+        Toast.show(`Error parsing input: ${error.message}`);
         return;
       }
     }

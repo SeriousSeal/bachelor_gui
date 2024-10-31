@@ -1,7 +1,6 @@
 import React from 'react';
 import './App.css';
 import EinsumTreeVisualizer from './components/EinsumTreeVisualizer';
-import { ReactFlowProvider } from 'reactflow';
 
 function App() {
   return (

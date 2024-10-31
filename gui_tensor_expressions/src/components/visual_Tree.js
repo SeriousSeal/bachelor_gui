@@ -1,89 +1,62 @@
+import { hierarchy, tree } from 'd3-hierarchy';
+
 const buildVisualizationTree = (root) => {
-    let nodes = [];
-    let edges = [];
-    let idCounter = 1;
-    const nodeWidth = 150;
-    const nodeHeight = 40;
-    const levelHeight = 100;
-  
-    // First pass: assign initial x coordinates and determine tree dimensions
-    const assignInitialX = (node, depth = 0) => {
-      if (!node) return { width: 0, height: 0 };
-  
-      const leftSubtree = assignInitialX(node.left, depth + 1);
-      const rightSubtree = assignInitialX(node.right, depth + 1);
-  
-      const width = Math.max(nodeWidth, leftSubtree.width + rightSubtree.width);
-      const height = Math.max(leftSubtree.height, rightSubtree.height) + 1;
-  
-      node.x = leftSubtree.width;
-      node.y = depth * levelHeight;
-      node.width = width;
-      node.height = height;
-  
-      return { width, height };
-    };
-  
-    // Second pass: adjust x coordinates to center parent over children
-    const adjustX = (node, offsetX = 0) => {
-      if (!node) return;
-  
-      node.x += offsetX;
-  
-      if (node.left || node.right) {
-        const leftWidth = node.left ? node.left.width : 0;
-        const rightWidth = node.right ? node.right.width : 0;
-        const totalWidth = leftWidth + rightWidth;
-  
-        if (node.left) {
-          adjustX(node.left, offsetX);
-        }
-        if (node.right) {
-          adjustX(node.right, offsetX + leftWidth);
-        }
-  
-        // Center the parent node above its children
-        node.x = offsetX + (totalWidth - nodeWidth) / 2;
-      }
-    };
-  
-    // Third pass: create nodes and edges
-    const createNodesAndEdges = (node, parentId = null) => {
-      if (!node) return;
-  
-      const currentId = `${idCounter++}`;
-  
-      nodes.push({
-        id: currentId,
-        type: 'custom',
-        data: { 
-          label: node.value,
-          left: node.left?.value,
-          right: node.right?.value
-        },
-        position: { x: node.x, y: node.y }
-        
-      });
-  
-      if (parentId !== null) {
-        edges.push({
-          id: `e${parentId}-${currentId}`,
-          source: parentId,
-          target: currentId,
-          type: 'smoothstep'  // Changed to smoothstep for better appearance
-        });
-      }
-  
-      createNodesAndEdges(node.left, currentId);
-      createNodesAndEdges(node.right, currentId);
-    };
-  
-    // Execute the three passes
-    assignInitialX(root);
-    adjustX(root);
-    createNodesAndEdges(root);
-  
-    return { nodes, edges };
+  // First, count the total number of nodes to determine sizing
+  const countNodes = (node) => {
+    if (!node) return 0;
+    return 1 + countNodes(node.left) + countNodes(node.right);
   };
 
-  export default buildVisualizationTree;
+  const totalNodes = countNodes(root);
+
+  // Calculate dimensions based on total nodes
+  const width = totalNodes * 40;  // Minimum 800, scales with nodes
+  const height = totalNodes * 30;  // Vertical scaling
+
+  // Create a hierarchy from the root
+  const hierarchyRoot = hierarchy(root, d => {
+    return [d.left, d.right].filter(child => child !== null && child !== undefined);
+  });
+
+  // Create a tree layout with dynamic sizing and increased separation
+  const treeLayout = tree()
+    .size([width, height])
+    .separation((a, b) => {
+      // Increase horizontal separation, especially for sibling nodes
+      return (a.parent === b.parent) ? 1.5 : 2;
+    });
+
+  // Apply the tree layout to compute node positions
+  const treeRoot = treeLayout(hierarchyRoot);
+
+  // Convert to nodes and edges format
+  const nodes = treeRoot.descendants().map((d, i) => ({
+    id: `node-${i}`,
+    type: 'custom',
+    data: { 
+      label: d.data.value,
+      left: d.data.left?.value,
+      right: d.data.right?.value,
+      depth: d.depth  // Add depth information
+    },
+    position: { 
+      x: d.x, 
+      y: d.y 
+    }
+  }));
+
+  const edges = treeRoot.links().map((link, i) => ({
+    id: `edge-${i}`,
+    source: nodes.find(n => n.data.label === link.source.data.value).id,
+    target: nodes.find(n => n.data.label === link.target.data.value).id,
+    type: 'smoothstep'
+  }));
+
+  return { 
+    nodes, 
+    edges,
+    dimensions: { width, height }  // Optional: return calculated dimensions
+  };
+};
+
+export default buildVisualizationTree;
