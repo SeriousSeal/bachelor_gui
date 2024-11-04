@@ -5,50 +5,63 @@ import { Toast } from './toast.js';
 
 const IndexSizeInput = ({ indexSizes, setIndexSizes, onUpdate }) => {
   const [bulkInput, setBulkInput] = useState('');
+  const [isEditing, setIsEditing] = useState(false);
+  
+  const sortedIndices = Object.keys(indexSizes).sort((a, b) => 
+    a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
+  );
 
-  // Initialize and update bulk input whenever indexSizes changes
+  // Only sync bulk input with indexSizes when not editing
   useEffect(() => {
-    const values = Object.values(indexSizes).join(', ');
-    setBulkInput(values);
-  }, [indexSizes]);
+    if (!isEditing) {
+      const sortedSizes = sortedIndices.map(index => indexSizes[index]);
+      setBulkInput(sortedSizes.join(', '));
+    }
+  }, [indexSizes, sortedIndices, isEditing]);
 
   const handleInputChange = (index, value) => {
     const numValue = parseInt(value, 10);
-    setIndexSizes(prev => ({ ...prev, [index]: isNaN(numValue) ? 0 : numValue }));
+    const newSizes = { 
+      ...indexSizes, 
+      [index]: isNaN(numValue) ? 0 : numValue 
+    };
+    setIndexSizes(newSizes);
+    onUpdate(newSizes);
   };
 
   const handleBulkInputChange = (e) => {
     setBulkInput(e.target.value);
+    setIsEditing(true);
   };
 
   const handleUpdateTree = () => {
-    if (bulkInput) {
-      try {
-        // Parse the input string - accepts formats like "1,2,3" or "1 2 3" or "1, 2, 3"
-        const values = bulkInput.split(/[,\s]+/).filter(Boolean);
-        const indices = Object.keys(indexSizes);
-        
-        if (values.length !== indices.length) {
-          Toast.show(`Please provide ${indices.length} values (one for each index)`);
-          return;
-        }
+    if (!bulkInput.trim()) {
+      return;
+    }
 
-        const newSizes = {};
-        indices.forEach((index, i) => {
-          const numValue = parseInt(values[i], 10);
-          if (isNaN(numValue)) {
-            throw new Error(`Invalid number: ${values[i]}`);
-          }
-          newSizes[index] = numValue;
-        });
-
-        setIndexSizes(newSizes);
-      } catch (error) {
-        Toast.show(`Error parsing input: ${error.message}`);
+    try {
+      const values = bulkInput.split(/[,\s]+/).filter(Boolean);
+      
+      if (values.length !== sortedIndices.length) {
+        Toast.show(`Please provide ${sortedIndices.length} values (one for each index)`);
         return;
       }
+
+      const newSizes = {};
+      sortedIndices.forEach((index, i) => {
+        const numValue = parseInt(values[i], 10);
+        if (isNaN(numValue)) {
+          throw new Error(`Invalid number: ${values[i]}`);
+        }
+        newSizes[index] = numValue;
+      });
+
+      setIndexSizes(newSizes);
+      onUpdate(newSizes);
+      setIsEditing(false);  // Reset editing state after successful update
+    } catch (error) {
+      Toast.show(`Error parsing input: ${error.message}`);
     }
-    onUpdate(indexSizes);
   };
 
   return (
@@ -71,13 +84,13 @@ const IndexSizeInput = ({ indexSizes, setIndexSizes, onUpdate }) => {
 
         <TabsContent value="individual">
           <div className="grid grid-cols-2 gap-4">
-            {Object.entries(indexSizes).map(([index, size]) => (
+            {sortedIndices.map((index) => (
               <div key={index} className="flex items-center">
                 <label htmlFor={`index-${index}`} className="font-medium mr-2">{index}:</label>
                 <input
                   id={`index-${index}`}
                   type="number"
-                  value={size}
+                  value={indexSizes[index]}
                   onChange={(e) => handleInputChange(index, e.target.value)}
                   className="w-20 p-1 border border-gray-300 rounded-md"
                 />
@@ -87,31 +100,32 @@ const IndexSizeInput = ({ indexSizes, setIndexSizes, onUpdate }) => {
         </TabsContent>
 
         <TabsContent value="bulk">
-        <div className="space-y-4">
-          {Object.keys(indexSizes).length > 0 && (
-            <>
-              <div>
-                <label className="block mb-2 text-sm font-medium">
-                  Enter all sizes (comma or space separated):
-                </label>
-                <input
-                  type="text"
-                  value={bulkInput}
-                  onChange={handleBulkInputChange}
-                  placeholder="e.g., 2,3,4 or 2 3 4"
-                  className="w-full p-2 border border-gray-300 rounded-md"
-                />
-              </div>
-              <div className="text-sm text-gray-500">
-                Current indices: {Object.keys(indexSizes).join(', ')}
-              </div>
-            </>
-          )}
-        </div>
+          <div className="space-y-4">
+            {sortedIndices.length > 0 && (
+              <>
+                <div>
+                  <label className="block mb-2 text-sm font-medium">
+                    Enter all sizes (comma or space separated):
+                  </label>
+                  <input
+                    type="text"
+                    value={bulkInput}
+                    onChange={handleBulkInputChange}
+                    onFocus={() => setIsEditing(true)}
+                    placeholder="e.g., 2,3,4 or 2 3 4"
+                    className="w-full p-2 border border-gray-300 rounded-md"
+                  />
+                </div>
+                <div className="text-sm text-gray-500">
+                  Current indices (sorted): {sortedIndices.join(', ')}
+                </div>
+              </>
+            )}
+          </div>
         </TabsContent>
       </Tabs>
 
-      {Object.keys(indexSizes).length > 0 && (
+      {sortedIndices.length > 0 && (
         <button 
           onClick={handleUpdateTree} 
           className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors w-full"

@@ -7,16 +7,22 @@ function isLetterOrNumber(char) {
 function isValidArrayChar(char) {
   return /^[a-zA-Z0-9,[\]]$/.test(char);
 }
-
 export function parseTree(str) {
   let index = 0;
   str = str.replace(/\s/g, '');
+
+  function formatError(message, position) {
+    const line1 = "Error: " + message;
+    const line2 = str;
+    const line3 = " ".repeat(position) + "^";
+    return `${line1}\n${line2}\n${line3}`;
+  }
 
   function parseArray() {
     const result = [];
     while (index < str.length) {
       if (str[index] === ']') {
-        index++; // Skip closing bracket
+        index++;
         break;
       }
 
@@ -29,12 +35,11 @@ export function parseTree(str) {
         result.push(num);
       }
 
-      // Skip comma or any other non-alphanumeric character
       if (str[index] === ',' && index < str.length) {
-        index++; // Skip ','
+        index++;
       }
-      if (!isValidArrayChar(str[index])) {
-        throw new Error(`unexpected character at position ${index}: ${str[index]}`);
+      if (index < str.length && !isValidArrayChar(str[index])) {
+        throw new Error(formatError(`Invalid character '${str[index]}'`, index));
       }
     }
     return result;
@@ -42,42 +47,48 @@ export function parseTree(str) {
 
   function parse() {
     if (index >= str.length) {
-      throw new Error('Unexpected end of input');
+      throw new Error(formatError("Unexpected end of input", str.length));
     }
     if (str[index] === '[') {
       index++;
       const left = parse();
       if (str.slice(index, index + 3) === '->[') {
-        index += 3; // Skip '->'
+        index += 3;
         const head = parseArray();
         index++;
-        return new Node(head, left, null); // Transposition node has only left child
+        return new Node(head, left, null);
       }
       if (str.slice(index, index + 2) !== '+[' && str.slice(index, index + 2) !== ',[') {
-        console.log(str.slice(index, index + 2));
-        throw new Error(`Expected '+[' or ',[' at position ${index}`);
+        throw new Error(formatError(
+          `Expected '+[' or ',[' but found '${str.slice(index, index + 2)}'`,
+          index
+        ));
       }
-      index += 2; // Skip '+['
+      index += 2;
       const right = parse();
       
       if (str.slice(index, index + 3) === '->[') {
-        index += 3; // Skip '->'
+        index += 3;
         const head = parseArray();
         index++;
         return new Node(head, left, right);
       } else {
-        throw new Error(`Expected head at pos ${index} (no "->") ${str.slice(index, index + 2)}`);
+        throw new Error(formatError(
+          `Expected '->' but found '${str.slice(index, index + 2)}'`,
+          index
+        ));
       }
     } else {
       return new Node(parseArray());
     }
   }
+
   try {
     return parse();
   } catch (error) {
-    console.error(`Error parsing input: ${error.message}`);
-    Toast.show(`Error parsing input: ${error.message}`);
-    return null; // or handle the error in a way that fits your application
+    console.error(error.message);
+    Toast.show(error.message);
+    return null;
   }
 }
 

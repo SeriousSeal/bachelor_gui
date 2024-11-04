@@ -52,6 +52,18 @@ const EinsumTreeVisualizer = () => {
 
   const handleTreeUpdate = (indexSizes) => {
     tree.updateIndexSizes(indexSizes);
+    const totalOps = calculateTotalOperations(indexSizes, tree);
+    setTotalOperations(totalOps);
+
+    // Update only the most recent history item
+    setHistory(prevHistory => {
+      if (prevHistory.length === 0) return prevHistory;
+      
+      return [
+        { ...prevHistory[0], indexSizes: indexSizes },
+        ...prevHistory.slice(1)
+      ];
+    });
   };
 
 
@@ -268,10 +280,12 @@ const EinsumTreeVisualizer = () => {
                         <span className="font-medium">Tensor Size:&nbsp;</span>
                         {formatSize(tensorSizes(selectedNode.data.label))}
                       </div>
-                      <div className="text-lg mb-2">
-                        <span className="font-medium">Ops/Ops per Tree:&nbsp;</span>
-                        {(selectedNodeOperations*100/totalOperations).toLocaleString()} %
-                      </div>
+                      {selectedNodeOperations > 0 && (
+                        <div className="text-lg mb-2">
+                          <span className="font-medium">Ops/Ops per Tree:&nbsp;</span>
+                          {(selectedNodeOperations*100/totalOperations).toLocaleString()} %
+                        </div>
+                      )}
                     </CollapsiblePanel>
                   )}
                 </div>
