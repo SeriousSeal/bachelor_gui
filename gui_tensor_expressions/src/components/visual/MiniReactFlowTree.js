@@ -66,11 +66,11 @@ const MiniReactFlowTree = ({ node, left, right, dimTypes }) => {
           const color = getLetterColor(dimensionType);
           return `<span style="color: ${color};">${letter}</span>`;
         })
-        .join('');
+        .join(',');
     };
 
     const truncatedHtml = shouldTruncate ? 
-      createColoredHtml(text.slice(0, 5)) + '...' :
+      '...' + createColoredHtml(text.slice(-5)) :
       createColoredHtml(text);
     
     const fullColoredHtml = createColoredHtml(text);

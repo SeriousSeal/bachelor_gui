@@ -115,9 +115,7 @@ const EinsumTreeVisualizer = () => {
     const totalOps = calculateTotalOperations(newIndexSizes, tree);
     setTotalOperations(totalOps);
     
-    window.requestAnimationFrame(() => {
-      fitView('tree1');
-    });
+    setTimeout(() => fitView('tree1'), 0);
   };
 
   const handleDataTypeChange = (event) => {
@@ -133,9 +131,7 @@ const EinsumTreeVisualizer = () => {
     setEdges1(item.edges);
     setIndexSizes(item.indexSizes);
     setEinsumExpression(item.expression);
-    window.requestAnimationFrame(() => {
-      fitView('tree1');
-    });
+    setTimeout(() => fitView('tree1'), 0);
     };
 
   const fitView = (tree) => {

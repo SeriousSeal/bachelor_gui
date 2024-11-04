@@ -12,66 +12,58 @@ import ReactFlow, {
     ControlButton
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-
 const CustomNode = ({ data }) => {
   // Convert array to string and get total length
-  const fullLabel = Array.isArray(data.label) ? data.label.join('') : data.label;
-  
-  // Truncate text if it's longer than 15 characters
+  const fullLabel = Array.isArray(data.label) ? data.label.join(',') : data.label;
+
+  // Truncate text from the front if it's longer than specified length
   const truncateText = (text, maxLength = 14) => {
     if (text.length <= maxLength) return text;
-    return text.slice(0, maxLength-2) + '...';
+    return '...' + text.slice(-(maxLength-2));
   };
 
-  
   // Set width boundaries
   const minWidth = 60;
   const maxWidth = 120;
 
   const displayLabel = truncateText(fullLabel, maxWidth / 8);
   const textWidth = displayLabel.length * 8;
-  
-  // Calculate the ideal width based on visible text length
-  // Assuming average character width is ~8px at 14px font size
 
-  
   // Calculate actual width within bounds
   const nodeWidth = (Math.min(Math.max(textWidth, minWidth), maxWidth)) + 8;
-  
 
   return (
-          <div style={{ 
-            background: '#fff', 
-            border: '1px solid #777', 
-            borderRadius: '8px', 
-            width: `${nodeWidth}px`,
-            height: '40px', 
-            display: 'flex', 
-            justifyContent: 'center', 
-            alignItems: 'center',
-            fontSize: '14px',
-            cursor: 'pointer',
-            padding: '0 10px',
-            overflow: 'hidden',
-            whiteSpace: 'nowrap',
-            textOverflow: 'ellipsis',
-            transition: 'width 0.2s ease-in-out'
-          }}>
-            {displayLabel}
-            <Handle 
-              type="target" 
-              position={Position.Top} 
-              style={{ visibility: 'hidden' }} 
-            />
-            <Handle 
-              type="source" 
-              position={Position.Bottom} 
-              style={{ visibility: 'hidden' }} 
-            />
-          </div>
+    <div style={{
+      background: '#fff',
+      border: '1px solid #777',
+      borderRadius: '8px',
+      width: `${nodeWidth}px`,
+      height: '40px',
+      display: 'flex',
+      justifyContent: 'center',
+      alignItems: 'center',
+      fontSize: '14px',
+      cursor: 'pointer',
+      padding: '0 10px',
+      overflow: 'hidden',
+      whiteSpace: 'nowrap',
+      textOverflow: 'ellipsis',
+      transition: 'width 0.2s ease-in-out'
+    }}>
+      {displayLabel}
+      <Handle
+        type="target"
+        position={Position.Top}
+        style={{ visibility: 'hidden' }}
+      />
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        style={{ visibility: 'hidden' }}
+      />
+    </div>
   );
 };
-
 
 const nodeTypes = {
   custom: CustomNode,
