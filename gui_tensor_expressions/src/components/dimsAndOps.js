@@ -33,53 +33,99 @@ const checkOccurrence = (letter, node, left, right) => {
 };
 
 
+
+
 export const dimensionTypes = (node, left, right) => {
   let cloneNode = cloneDeep(node);
   let cloneLeft = cloneDeep(left);
   let cloneRight = cloneDeep(right);
   const dimtypes = createDimTypes();
   let tempFirst, tempSecond, tempThird = false;
-  
+
+  let tempLoop = false;
 
   for (let i = node.length - 1; i >= 0; i--) {
     const element = node[i];
+
     const {inNode, inLeft, inRight} = checkOccurrenceLast(element, cloneNode, cloneLeft, cloneRight);
-    if (inNode && inLeft && inRight && !tempFirst) {
-      dimtypes.primitive.cb.push(element);
-      cloneNode.pop();
-      cloneLeft.pop();
-      cloneRight.pop();
+    const leftAndRight = cloneLeft[cloneLeft.length - 1] === cloneRight[cloneRight.length - 1]
+    if (inNode && inLeft && inRight) {
+      if(!tempFirst) {
+        dimtypes.primitive.cb.push(element);
+        cloneNode.pop();
+        cloneLeft.pop();
+        cloneRight.pop();
+      }
+      else{
+        dimtypes.loop.bc.push(element);
+        cloneNode.pop();
+        cloneLeft.pop();
+        cloneRight.pop();
+        tempLoop = true;
+      }
     }
-    else if (inNode && inLeft && !inRight && !tempSecond) {
-      tempFirst = true;
-      dimtypes.primitive.mb.push(element);
-      cloneNode.pop();
-      cloneLeft.pop();
+    else if (inNode && inLeft && !inRight) {
+      
+      if(!tempFirst) {
+        tempLoop = false;
+      }
+
+      if(!tempSecond && !tempLoop) {
+        tempFirst = true;
+        dimtypes.primitive.mb.push(element);
+        cloneNode.pop();
+        cloneLeft.pop();
+      }
+      else {
+        dimtypes.loop.bm.push(element);
+        cloneNode.pop();
+        cloneLeft.pop();
+        tempLoop = true;
+      }
     }
-    else if (!tempThird) {
-      tempSecond = true;
-      tempThird = true;
-      while (cloneLeft?.length > 0 && cloneRight?.length > 0) {
-        if (cloneLeft[cloneLeft.length - 1] === cloneRight[cloneRight.length - 1]) {
-          const el = cloneLeft.pop();
-          cloneRight.pop();
-          dimtypes.primitive.kb.push(el);
-        } else {
-          break;
-        }
+    else if (leftAndRight) {
+      if(!tempSecond) {
+        tempLoop = false;
+      }
+
+      if(!tempThird && !tempLoop) {        
+        tempFirst = true;
+        tempSecond = true;
+        const el = cloneLeft.pop();
+        cloneRight.pop();
+        dimtypes.primitive.kb.push(el);
+      }
+      else {
+        const el = cloneLeft.pop();
+        cloneRight.pop();
+        dimtypes.loop.bk.push(el);
+        tempLoop = true;
       }
       i++;
     }
     else if (inNode && !inLeft && inRight ) {
-      dimtypes.primitive.nb.push(element);
-      cloneNode.pop();
-      cloneRight.pop();
-    }
-    else break;
-  }
+      if(!tempThird) {
+        tempLoop = false;
+      }
 
-  //check for kb
- 
+      if(!tempLoop) {
+        tempFirst = true;
+        tempSecond = true;
+        tempThird = true;
+        dimtypes.primitive.nb.push(element);
+        cloneNode.pop();
+        cloneRight.pop();
+      }
+      else{
+        dimtypes.loop.bn.push(element);
+        cloneNode.pop();
+        cloneRight.pop();
+      }
+    }
+    else {
+      console.log(element, cloneNode, cloneLeft, cloneRight);
+    };
+  }
 
   cloneLeft?.reverse().forEach(element => {
     const {inNode, inLeft, inRight} = checkOccurrence(element, cloneNode, cloneLeft, cloneRight);

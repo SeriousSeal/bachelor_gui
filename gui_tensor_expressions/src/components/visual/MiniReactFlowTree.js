@@ -111,7 +111,11 @@ const MiniReactFlowTree = ({ node, left, right, dimTypes }) => {
         fontSize: '16px',
         border: '1px solid #ccc',
         borderRadius: '4px',
-        backgroundColor: 'white'
+        backgroundColor: 'white',
+        padding: 0, // Remove padding
+        display: 'flex', // Use flexbox
+        alignItems: 'center', // Center vertically
+        justifyContent: 'center' // Center horizontally
       }
     };
   };
@@ -185,6 +189,9 @@ const MiniReactFlowTree = ({ node, left, right, dimTypes }) => {
           nodes={nodes}
           edges={edges}
           fitView
+          fitViewOptions={{
+            padding: 0.2 // Add some padding around the view
+          }}
           zoomOnScroll={false}
           panOnScroll={false}
           nodesDraggable={false}
