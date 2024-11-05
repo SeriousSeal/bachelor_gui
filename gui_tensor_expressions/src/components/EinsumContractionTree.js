@@ -37,6 +37,9 @@ export function parseTree(str) {
 
       if (str[index] === ',' && index < str.length) {
         index++;
+        if(str[index] === ']') {
+          throw new Error(formatError(`Expected character but found ']'`, index));
+        }
       }
       if (index < str.length && !isValidArrayChar(str[index])) {
         throw new Error(formatError(`Invalid character '${str[index]}'`, index));
@@ -84,7 +87,15 @@ export function parseTree(str) {
   }
 
   try {
-    return parse();
+    const parsedTree = parse();
+    index--;
+    if (index < str.length){
+      throw new Error(formatError(
+        `Parsed tree but found extra characters '${str.slice(index)}'`,
+        index
+      ));
+    }
+    return parsedTree;
   } catch (error) {
     console.error(error.message);
     Toast.show(error.message);
