@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import InfoPanel from './InfoPanel';
 import { FaBeer } from 'react-icons/fa';
+import { TbEyeCancel, TbEyeCheck } from "react-icons/tb";
 import { createPortal } from 'react-dom';
 import { LayoutOptionType } from '../constants';	
 import ReactFlow, {
@@ -78,11 +79,11 @@ const Flow = ({ nodes, edges, onNodesChange, onEdgesChange, onConnect, onNodeCli
     const [selectedNode, setSelectedNode] = useState(null);
     const [connectedNodes, setConnectedNodes] = useState([]);
     const [showPanel, setShowPanel] = useState(false);
+    const [hoverEnabled, setHoverEnabled] = useState(true); 
     const flowRef = useRef(null);
     const timeoutRef = useRef(null);
     const panelRef = useRef(null);
     const [panelPosition, setPanelPosition] = useState({ x: 0, y: 0 });
-    const reactFlowWrapperRef = useRef(null);
 
   
     const handleOptionClickFlow = (option) => {
@@ -90,6 +91,14 @@ const Flow = ({ nodes, edges, onNodesChange, onEdgesChange, onConnect, onNodeCli
       handleOptionClick(option);
     };
   
+    const toggleHoverBehavior = useCallback(() => {
+      setHoverEnabled(prev => !prev);
+      // Wenn Hover deaktiviert wird, setze hover-bezogene States zurück
+      if (hoverEnabled && !selectedNode) {
+        setHoveredNode(null);
+        setConnectedNodes([]);
+      }
+    }, [hoverEnabled, selectedNode]);
 
     const findConnectedNodes = useCallback((lookUpNode, node) => {
       if(!lookUpNode) return null;
@@ -107,10 +116,14 @@ const Flow = ({ nodes, edges, onNodesChange, onEdgesChange, onConnect, onNodeCli
     }, []);
 
     const handleNodeMouseEnter = useCallback((event, node) => {
+      if (!hoverEnabled) return; // Früher Return wenn Hover deaktiviert ist
+      if (selectedNode && !node.data.left && !node.data.right) return; // Früher Return wenn Node keine Kinder hat
+      console.log(node)
+      
       clearTimeout(timeoutRef.current);
       setHoveredNode(node);
-      setConnectedNodes(findConnectedNodes(tree.getRoot(),node));
-    }, [findConnectedNodes, tree]);
+      setConnectedNodes(findConnectedNodes(tree.getRoot(), node));
+    }, [findConnectedNodes, tree, hoverEnabled]);
   
     const handleNodeMouseLeave = useCallback(() => {
       timeoutRef.current = setTimeout(() => {
@@ -140,104 +153,30 @@ const Flow = ({ nodes, edges, onNodesChange, onEdgesChange, onConnect, onNodeCli
       // Implement the show contraction logic here
     }, [selectedNode, hoveredNode]);
 
-
-    useEffect(() => {
-      const handleGlobalClick = (event) => {
-        const isClickInPanel = panelRef.current?.contains(event.target);
-        const isClickOnControlButton = event.target.closest('.react-flow__controls');
-
-        if (!isClickInPanel && !isClickOnControlButton) {
-          setShowPanel(false);
-        }
-      };
-
-      document.addEventListener('click', handleGlobalClick);
-      return () => {
-        document.removeEventListener('click', handleGlobalClick);
-      };
-    }, []);
-
-    const handleControlButtonClick = useCallback((event) => {
-        const button = event.currentTarget;
-        const rect = button.getBoundingClientRect();
-        setPanelPosition({ x: rect.x, y: rect.y });
-        setShowPanel(prev => !prev);
-    }, []);
-
-    // Update panel position when ReactFlow transforms
-    useEffect(() => {
-        const updatePanelPosition = () => {
-            const button = document.querySelector('.react-flow__controls button:last-child');
-            if (button && showPanel) {
-              const { left, top, width } = button.getBoundingClientRect();
-              const viewportWidth = window.innerWidth;
-              const panelWidth = panelRef.current.offsetWidth;
-              
-              // Calculate panel position
-              let newLeft = left + width + 10;
-              let newTop = top;
-        
-              // Adjust if panel would overflow right side
-              if (newLeft + panelWidth > viewportWidth) {
-                newLeft = left - panelWidth - 10;
-              }
-        
-              // Ensure panel stays within viewport
-              newLeft = Math.max(10, Math.min(newLeft, viewportWidth - panelWidth - 10));
-              newTop = Math.max(10, newTop);
-                setPanelPosition({ x: newLeft, y: newTop });
-            }
-        };
-
-        const observer = new ResizeObserver(updatePanelPosition);
-        const reactFlowWrapper = reactFlowWrapperRef.current;
-        
-        if (reactFlowWrapper) {
-            observer.observe(reactFlowWrapper);
-        }
-
-        return () => {
-            if (reactFlowWrapper) {
-                observer.disconnect();
-            }
-        };
-    }, [showPanel]);
-
-    useEffect(() => {
-      const timer = setTimeout(() => {
-        fitView({ padding: 0.2, includeHiddenNodes: false });
-      }, 0);
-      return () => clearTimeout(timer);
-    }, [fitView]);
-  
-    useEffect(() => {
-      if (fitViewFunction) {
-        fitViewFunction(() => fitView({ padding: 0.2, includeHiddenNodes: false }));
-      }
-    }, [fitView, fitViewFunction]);
-
+    // Add click outside handler
     useEffect(() => {
       const handleClickOutside = (event) => {
-        if (flowRef.current && !flowRef.current.contains(event.target)) {
-          setSelectedNode(null);
-          setHoveredNode(null);
-          setConnectedNodes([]);
-        }
+          const isClickInsidePanel = panelRef.current && panelRef.current.contains(event.target);
+          const isClickOnControlButton = event.target.closest('.react-flow__controls-button');
+  
+          if (showPanel && !isClickInsidePanel && !isClickOnControlButton) {
+              setShowPanel(false);
+          }
       };
-
-      document.addEventListener('mousedown', handleClickOutside);
+  
+      document.addEventListener('pointerdown', handleClickOutside, true); // true for capture phase
+      
       return () => {
-        document.removeEventListener('mousedown', handleClickOutside);
+          document.removeEventListener('pointerdown', handleClickOutside, true);
       };
-    }, []);
+  }, [showPanel]);
 
-    useEffect(() => {
-      return () => {
-        if (timeoutRef.current) {
-          clearTimeout(timeoutRef.current);
-        }
-      };
-    }, []);
+  const handleControlButtonClick = useCallback((event) => {
+    const button = event.currentTarget;
+    const rect = button.getBoundingClientRect();
+    setPanelPosition({ x: rect.x + 30, y: rect.y });
+    setShowPanel(prev => !prev);
+}, []);
 
     const handlePanelMouseEnter = useCallback(() => {
       clearTimeout(timeoutRef.current);
@@ -254,40 +193,8 @@ const Flow = ({ nodes, edges, onNodesChange, onEdgesChange, onConnect, onNodeCli
 
     const activeNode = selectedNode || hoveredNode;
 
-
-//   const getInitialPanelPosition = useCallback((node) => {
-//     const { x, y, zoom } = getViewport();
-//     const panelWidth = 320;  // Width of the InfoPanel
-//     const panelHeight = 200;  // Height of the InfoPanel
-//   
-//     // Calculate potential positions
-//     const leftPosition = {
-//       x: (node.position.x * zoom + x) - panelWidth - node.width - 100, // Adjust for offset
-//       y: (node.position.y * zoom + y) - panelHeight/2, // Adjust for offset
-//     };
-//     const rightPosition = {
-//       x: (node.position.x * zoom + x) + node.width*2,
-//       y: (node.position.y * zoom + y) - panelHeight/2,
-//     };
-//
-//    
-//      // Get viewport dimensions using getBoundingClientRect
-//      const { width: viewportWidth, height: _ } = document.documentElement.getBoundingClientRect();
-//    
-//      // Check if positions fit in the viewport
-//      const fitsLeft = leftPosition.x >= 0; // Must not overflow the left boundary
-//      const fitsRight = rightPosition.x + panelWidth <= viewportWidth; // Must not overflow the right boundary
-//    
-//
-//      // Select the best position based on available space
-//      if (fitsLeft) return leftPosition;
-//      if (fitsRight) return rightPosition;
-//      // Default to above position if none fit
-//      return leftPosition; // Fallback to above if none fit
-//    }, [getViewport]);
-
     return (
-      <div ref={reactFlowWrapperRef} style={{ width: '100%', height: '100%' }}>
+      <div style={{ width: '100%', height: '100%' }}>
         <ReactFlow
           ref={flowRef}
           nodes={nodes}
@@ -307,8 +214,18 @@ const Flow = ({ nodes, edges, onNodesChange, onEdgesChange, onConnect, onNodeCli
           nodesDraggable={false}
         >
           <Controls>
-            <ControlButton onClick={handleControlButtonClick}>
+            <ControlButton 
+              onClick={handleControlButtonClick}
+            >
               <FaBeer />
+            </ControlButton>
+            <ControlButton 
+              onClick={toggleHoverBehavior}
+              className={`hover-toggle ${hoverEnabled ? 'active' : ''}`}
+              title={hoverEnabled ? 'Disable Hover' : 'Enable Hover'}
+            >
+              {/* Sie können hier ein passendes Icon einsetzen */}
+              {hoverEnabled ? <TbEyeCheck />: <TbEyeCancel />}
             </ControlButton>
           </Controls>
           <Background variant="dots" gap={12} size={1} />
@@ -333,29 +250,28 @@ const Flow = ({ nodes, edges, onNodesChange, onEdgesChange, onConnect, onNodeCli
             </div>
           )}
           {showPanel && createPortal(
-              <div
-                  ref={panelRef}
-                  className="fixed bg-white border border-gray-200 p-3 w-48 shadow-md rounded-md z-50 text-sm"
-                  style={{
-                      left: `${panelPosition.x}px`,
-                      top: `${panelPosition.y}px`
+            <div
+              ref={panelRef}
+              className="fixed bg-white border border-gray-200 p-3 w-48 shadow-md rounded-md z-50 text-sm"
+              style={{
+                left: `${panelPosition.x}px`,
+                top: `${panelPosition.y}px`
+              }}
+            >
+              <h3 className="text-base font-medium mb-1">Choose an option:</h3>
+              {Object.values(LayoutOptionType).map(option => (
+                <div
+                  key={option}
+                  className="cursor-pointer hover:bg-gray-100 rounded p-1.5 text-sm"
+                  onClick={() => {
+                    handleOptionClickFlow(option);
                   }}
-              >
-                  <h3 className="text-base font-medium mb-1">Choose an option:</h3>
-                  {Object.values(LayoutOptionType).map(option => (
-                      <div
-                          key={option}
-                          className="cursor-pointer hover:bg-gray-100 rounded p-1.5 text-sm"
-                          onClick={() => {
-                            handleOptionClickFlow(option);
-                              // Additional logic like closing the panel
-                          }}
-                      >
-                          {`Option ${option.slice(-1)}`}
-                      </div>
-                  ))}
-              </div>,
-              document.body
+                >
+                  {`Option ${option.slice(-1)}`}
+                </div>
+              ))}
+            </div>,
+            document.body
           )}
         </ReactFlow>
       </div>
