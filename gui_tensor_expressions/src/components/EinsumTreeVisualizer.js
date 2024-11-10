@@ -74,23 +74,36 @@ const EinsumTreeVisualizer = () => {
     const unorderedTree = tree.getRoot();
     if (!unorderedTree) return;
     setTree(tree);
-    const { nodes, edges } = buildVisualizationTree(unorderedTree);
-
-    setNodes1(nodes);
-    setEdges1(edges);
 
     let newIndexSizes = {};
-    // Update index sizes
-    nodes.forEach(node => {
-      if (node.data && node.data.label) {
-        for (const indice of node.data.label) {
+
+    const traverseTree = (unorderedTree) => {
+      if(!unorderedTree) return;
+      if (unorderedTree.value && Array.isArray(unorderedTree.value)) {
+        for (const indice of unorderedTree.value) {
           if (!newIndexSizes[indice]) {
             newIndexSizes[indice] = 2; // Default size, adjust as needed
           }
         }
       }
-    });
+      traverseTree(unorderedTree.left);
+      traverseTree(unorderedTree.right);
+    };
+    traverseTree(unorderedTree);
     setIndexSizes(newIndexSizes);
+
+    // Calculate total operations
+    const totalOps = calculateTotalOperations(newIndexSizes, unorderedTree);
+    setTotalOperations(totalOps);
+    console.log(unorderedTree)
+
+
+    const { nodes, edges } = buildVisualizationTree(unorderedTree);
+
+    setNodes1(nodes);
+    setEdges1(edges);
+
+
     
     // Update history
     setHistory(prevHistory => {
@@ -111,9 +124,7 @@ const EinsumTreeVisualizer = () => {
       return updatedHistory.slice(0, 5);
     });
 
-    // Calculate total operations
-    const totalOps = calculateTotalOperations(newIndexSizes, tree);
-    setTotalOperations(totalOps);
+
     
     setTimeout(() => fitView('tree1'), 0);
   };
@@ -232,6 +243,7 @@ const EinsumTreeVisualizer = () => {
                     onConnect={onConnect1}
                     onNodeClick={onNodeClick}
                     tree={tree}
+                    totalOperations={totalOperations}
                     fitViewFunction={(fn) => (fitViewFunctions.current.tree1 = fn)}
                     handleOptionClick={handleOptionClick}
                   />

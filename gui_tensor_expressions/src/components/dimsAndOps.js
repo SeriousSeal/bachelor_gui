@@ -123,7 +123,7 @@ export const dimensionTypes = (node, left, right) => {
       }
     }
     else {
-      console.log(element, cloneNode, cloneLeft, cloneRight);
+      //console.log(element, cloneNode, cloneLeft, cloneRight);
     };
   }
 
@@ -200,13 +200,14 @@ export const calculateTotalOperations = (indexSizes, tree) => {
     if (node.left && node.right) {
       const dimtypes = dimensionTypes(node.value, node.left.value, node.right.value);
       const operations = calculateOperations(dimtypes, indexSizes);
+      node.operations = operations;
       totalOperations += operations;
       
       traverseTree(node.left);
       traverseTree(node.right);
     }
   };
-  
-  traverseTree(tree.root);
+  traverseTree(tree);
+  tree.totalOperations = totalOperations;
   return totalOperations;
 }

@@ -10,7 +10,7 @@ const buildVisualizationTree = (root) => {
   const totalNodes = countNodes(root);
 
   // Calculate dimensions based on total nodes
-  const width = Math.max(300, totalNodes * 40);  // Minimum 800, scales with nodes
+  const width = Math.max(300, totalNodes * 50);  // Minimum 800, scales with nodes
   const height = Math.max(125, totalNodes * 30);  // Vertical scaling
 
   // Create a hierarchy from the root
@@ -37,6 +37,8 @@ const buildVisualizationTree = (root) => {
       label: d.data.value,
       left: d.data.left?.value,
       right: d.data.right?.value,
+      operations: d.data.operations,  // Add operations information
+      totalOperations: d.data.totalOperations,  // Add total operations
       depth: d.depth  // Add depth information
     },
     position: { 
