@@ -111,6 +111,7 @@ const Flow = ({
     const [panelPosition, setPanelPosition] = useState({ x: 0, y: 0 });
 
     const rootData = useMemo(() => {
+      if(!tree) return;
       const rootNode = tree.getRoot();
       return {
         totalOperations: rootNode ? rootNode.totalOperations : 0
@@ -135,7 +136,7 @@ const Flow = ({
           })
         }
       }));
-    }, [nodes, showOperations, rootData.totalOperations]);
+    }, [nodes, showOperations, rootData?.totalOperations]);
 
     const toggleOperations = useCallback(() => {
       if (timeoutRef.current) {
