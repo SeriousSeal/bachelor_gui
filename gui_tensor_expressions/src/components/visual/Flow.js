@@ -130,10 +130,9 @@ const Flow = ({
         ...node,
         data: {
           ...node.data,
-          ...(operationsData && {
-            ...operationsData,
-            operations: node.data.operations || 0
-          })
+          showOperations: showOperations,
+          totalOperations: rootData.totalOperations,
+          operations: node.data.operations || 0
         }
       }));
     }, [nodes, showOperations, rootData?.totalOperations]);

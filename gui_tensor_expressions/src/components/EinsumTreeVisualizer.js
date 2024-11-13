@@ -40,11 +40,10 @@ const EinsumTreeVisualizer = () => {
   };
 
   const onNodeClick = useCallback((event, node) => {
+    console.log(node)
     setSelectedNode(node);
-    if (node.data && node.data.left && node.data.right) {
-      const dimtypes = dimensionTypes(node.data.label, node.data.left, node.data.right);
-      const ops = calculateOperations(dimtypes, indexSizes);
-      setSelectedNodeOperations(ops);
+    if (node.data && node.data.left && node.data.right) {      
+      setSelectedNodeOperations(node.data.operations);
     } else {
       setSelectedNodeOperations(0);
     }
