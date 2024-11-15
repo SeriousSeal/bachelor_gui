@@ -1,5 +1,7 @@
 import { Toast } from './visual/toast.js';
 
+let nodeIdCounter = 0;
+
 function isLetterOrNumber(char) {
   return /^[a-zA-Z0-9]$/.test(char);
 }
@@ -37,7 +39,7 @@ export function parseTree(str) {
 
       if (str[index] === ',' && index < str.length) {
         index++;
-        if(str[index] === ']') {
+        if (str[index] === ']') {
           throw new Error(formatError(`Expected character but found ']'`, index));
         }
       }
@@ -69,7 +71,7 @@ export function parseTree(str) {
       }
       index += 2;
       const right = parse();
-      
+
       if (str.slice(index, index + 3) === '->[') {
         index += 3;
         const head = parseArray();
@@ -89,7 +91,7 @@ export function parseTree(str) {
   try {
     const parsedTree = parse();
     index--;
-    if (index < str.length){
+    if (index < str.length) {
       throw new Error(formatError(
         `Parsed tree but found extra characters '${str.slice(index)}'`,
         index
@@ -105,6 +107,7 @@ export function parseTree(str) {
 
 class Node {
   constructor(value, left = null, right = null) {
+    this.id = `node_${nodeIdCounter++}`; // Add unique ID to each node
     this.value = value;
     this.left = left;
     this.right = right;
@@ -119,6 +122,7 @@ class Node {
 
 export class Tree {
   constructor(str) {
+    nodeIdCounter = 0;
     this.root = parseTree(str);
     this.indexSizes = {};
   }

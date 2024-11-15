@@ -11,7 +11,7 @@ const buildVisualizationTree = (root) => {
 
   // Calculate dimensions based on total nodes
   const width = Math.max(300, totalNodes * 50);  // Minimum 800, scales with nodes
-  const height = Math.max(125, totalNodes * 30);  // Vertical scaling
+  const height = Math.max(125, totalNodes * 40);  // Vertical scaling
 
   // Create a hierarchy from the root
   const hierarchyRoot = hierarchy(root, d => {
@@ -31,19 +31,20 @@ const buildVisualizationTree = (root) => {
 
   // Convert to nodes and edges format
   const nodes = treeRoot.descendants().map((d, i) => ({
-    id: `node-${i}`,
+    id: d.data.id,
     type: 'custom',
-    data: { 
+    data: {
       label: d.data.value,
       left: d.data.left?.value,
       right: d.data.right?.value,
       operations: d.data.operations,  // Add operations information
       totalOperations: d.data.totalOperations,  // Add total operations
+      operationsPercentage: d.data.operationsPercentage,  // Add operations percentage
       depth: d.depth  // Add depth information
     },
-    position: { 
-      x: d.x, 
-      y: d.y 
+    position: {
+      x: d.x,
+      y: d.y
     }
   }));
 
@@ -54,8 +55,8 @@ const buildVisualizationTree = (root) => {
     type: 'smoothstep'
   }));
 
-  return { 
-    nodes, 
+  return {
+    nodes,
     edges,
     dimensions: { width, height }  // Optional: return calculated dimensions
   };
