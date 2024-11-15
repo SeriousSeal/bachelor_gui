@@ -8,7 +8,7 @@ import CollapsiblePanel from './visual/CollapsiblePanel';
 import CustomPanelResizeHandle from './visual/CustomPanelResizeHandle';
 import buildVisualizationTree from './visual_Tree';
 import { LayoutOptionType } from './constants';
-import { calculateTotalOperations, dimensionTypes, calculateOperations } from './dimsAndOps';
+import { calculateTotalOperations } from './dimsAndOps';
 import {
   ReactFlowProvider,
   addEdge,
@@ -39,16 +39,15 @@ const EinsumTreeVisualizer = () => {
     setEinsumExpression(event.target.value);
   };
 
-  const onNodeClick = useCallback((event, node) => {
+  const onNodeClick = (_, node) => {
     console.log(node)
-    console.log(totalOperations)
     setSelectedNode(node);
     if (node.data && node.data.left && node.data.right) {
       setSelectedNodeOperations(node.data.operations);
     } else {
       setSelectedNodeOperations(0);
     }
-  }, [indexSizes]);
+  };
 
   const handleTreeUpdate = (indexSizes) => {
     tree.updateIndexSizes(indexSizes);

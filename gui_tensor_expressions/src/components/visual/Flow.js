@@ -10,7 +10,6 @@ import ReactFlow, {
   Controls,
   Handle,
   Position,
-  useReactFlow,
   ControlButton
 } from 'reactflow';
 import 'reactflow/dist/style.css';
@@ -99,7 +98,6 @@ const Flow = ({
   fitViewFunction,
   handleOptionClick = () => { } // Default no-op function }) => {
 }) => {
-  const { fitView } = useReactFlow();
   const [hoveredNode, setHoveredNode] = useState(null);
   const [selectedNode, setSelectedNode] = useState(null);
   const [connectedNodes, setConnectedNodes] = useState([]);
