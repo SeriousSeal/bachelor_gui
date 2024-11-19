@@ -13,6 +13,7 @@ import ReactFlow, {
   ControlButton
 } from 'reactflow';
 import 'reactflow/dist/style.css';
+import { ResponsiveProvider } from '../context/ResponsiveContext';
 
 const NODE_TYPES = {
   custom: React.memo(({ data }) => {
@@ -86,6 +87,11 @@ const NODE_TYPES = {
   })
 };
 
+const getColorForPercentage = (percentage) => {
+  const value = percentage / 100;
+  return `hsl(0, ${value * 100}%, ${70 - (value * 20)}%)`;
+};
+
 
 const Flow = ({
   nodes = [], // Provide default empty array
@@ -95,6 +101,7 @@ const Flow = ({
   onConnect = () => { }, // Default no-op function
   onNodeClick: propOnNodeClick,
   tree = { getRoot: () => null }, // Default empty tree
+  indexSizes = {},
   fitViewFunction,
   handleOptionClick = () => { } // Default no-op function }) => {
 }) => {
@@ -108,19 +115,52 @@ const Flow = ({
   const timeoutRef = useRef(null);
   const panelRef = useRef(null);
   const [panelPosition, setPanelPosition] = useState({ x: 0, y: 0 });
+  const [showSizes, setShowSizes] = useState(false);
 
 
-  const augmentedNodes = useMemo(() => {
-    if (!nodes.length) return nodes;
+  const { augmentedNodes, augmentedEdges } = useMemo(() => {
+    if (!nodes.length) return { augmentedNodes: nodes, augmentedEdges: edges };
 
-    return nodes.map(node => ({
+    const modifiedNodes = nodes.map(node => ({
       ...node,
       data: {
         ...node.data,
         showOperations: showOperations,
       }
     }));
-  }, [nodes, showOperations]);
+
+    const modifiedEdges = edges.map(edge => {
+      // Default edge style for edges without percentages
+      const defaultEdgeStyle = {
+        ...edge,
+        style: {
+          stroke: '#b1b1b7',
+          strokeWidth: 2
+        }
+      };
+
+      const sourceNode = nodes.find(n => n.id === edge.source);
+      if (sourceNode?.data?.operationsPercentage) {
+        return {
+          ...defaultEdgeStyle,
+          style: {
+            stroke: getColorForPercentage(sourceNode.data.normalizedPercentage),
+            strokeWidth: 2
+          },
+          // No animationDirection specified - this will make it flow from source to target
+          labelStyle: { fill: '#666', fontSize: '10px' },
+          labelBgStyle: { fill: 'rgba(255, 255, 255, 0.8)' }
+        };
+      }
+
+      return defaultEdgeStyle;
+    });
+
+    return {
+      augmentedNodes: modifiedNodes,
+      augmentedEdges: modifiedEdges
+    };
+  }, [nodes, edges, showOperations]);
 
   const toggleOperations = useCallback(() => {
     if (timeoutRef.current) {
@@ -138,7 +178,6 @@ const Flow = ({
 
   const toggleHoverBehavior = useCallback(() => {
     setHoverEnabled(prev => !prev);
-    // Wenn Hover deaktiviert wird, setze hover-bezogene States zurück
     if (hoverEnabled && !selectedNode) {
       setHoveredNode(null);
       setConnectedNodes([]);
@@ -162,7 +201,7 @@ const Flow = ({
 
   const handleNodeMouseEnter = useCallback((event, node) => {
     if (!hoverEnabled) return; // Früher Return wenn Hover deaktiviert ist
-    if (selectedNode && !node.data.left && !node.data.right) return; // Früher Return wenn Node keine Kinder hat
+    if (selectedNode && !node.data.right) return; // Früher Return wenn Node keine Kinder hat
     console.log(node)
 
     clearTimeout(timeoutRef.current);
@@ -198,7 +237,7 @@ const Flow = ({
     // Implement the show contraction logic here
   }, [selectedNode, hoveredNode]);
 
-  // Add click outside handler
+
   useEffect(() => {
     const handleClickOutside = (event) => {
       const isClickInsidePanel = panelRef.current && panelRef.current.contains(event.target);
@@ -209,12 +248,12 @@ const Flow = ({
       }
     };
 
-    document.addEventListener('pointerdown', handleClickOutside, true); // true for capture phase
+    document.addEventListener('pointerdown', handleClickOutside, true);
 
     return () => {
       document.removeEventListener('pointerdown', handleClickOutside, true);
     };
-  }, [showPanel]);
+  }, [showPanel, indexSizes]);
 
   const handleControlButtonClick = useCallback((event) => {
     const button = event.currentTarget;
@@ -236,96 +275,107 @@ const Flow = ({
     }
   }, [selectedNode]);
 
+  const handleToggleSizes = useCallback(() => {
+    setShowSizes(prev => !prev);
+  }, []);
+
+
   const activeNode = selectedNode || hoveredNode;
 
   return (
-    <div style={{ width: '100%', height: '100%' }}>
-      <ReactFlow
-        ref={flowRef}
-        nodes={augmentedNodes}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
-        nodeTypes={NODE_TYPES}
-        fitView
-        fitViewOptions={{ padding: 0.2 }}
-        minZoom={0.1}
-        maxZoom={4}
-        style={{ width: '100%', height: '100%' }}
-        onNodeClick={handleNodeClick}
-        onNodeMouseEnter={handleNodeMouseEnter}
-        onNodeMouseLeave={handleNodeMouseLeave}
-        nodesDraggable={false}
-      >
-        <Controls>
-          <ControlButton
-            onClick={handleControlButtonClick}
-          >
-            <FaBeer />
-          </ControlButton>
-          <ControlButton
-            onClick={toggleHoverBehavior}
-            className={`hover - toggle ${hoverEnabled ? 'active' : ''} `}
-            title={hoverEnabled ? 'Disable Hover' : 'Enable Hover'}
-          >
-            {/* Sie können hier ein passendes Icon einsetzen */}
-            {hoverEnabled ? <TbEyeCheck /> : <TbEyeCancel />}
-          </ControlButton>
-          <ControlButton
-            onClick={toggleOperations}
-            className={`operations - toggle ${showOperations ? 'active' : ''} `}
-            title={showOperations ? 'Hide Operations' : 'Show Operations'}
-          >
-            <TbPercentage />
-          </ControlButton>
-        </Controls>
-        <Background variant="dots" gap={12} size={1} />
-        {activeNode && connectedNodes.left && (
-          <div
-            onMouseEnter={handlePanelMouseEnter}
-            onMouseLeave={handlePanelMouseLeave}
-          >
-            <InfoPanel
-              node={activeNode}
-              connectedNodes={connectedNodes}
-              onSwapChildren={swapChildren}
-              onShowContraction={showContraction}
-              onClose={() => {
-                setSelectedNode(null);
-                setHoveredNode(null);
-                setConnectedNodes([]);
-              }}
-              initialPosition={{ x: 20, y: 20 }}
-            />
-          </div>
-        )}
-        {showPanel && createPortal(
-          <div
-            ref={panelRef}
-            className="fixed bg-white border border-gray-200 p-3 w-48 shadow-md rounded-md z-50 text-sm"
-            style={{
-              left: `${panelPosition.x} px`,
-              top: `${panelPosition.y} px`
-            }}
-          >
-            <h3 className="text-base font-medium mb-1">Choose an option:</h3>
-            {Object.values(LayoutOptionType).map(option => (
-              <div
-                key={option}
-                className="cursor-pointer hover:bg-gray-100 rounded p-1.5 text-sm"
-                onClick={() => {
-                  handleOptionClickFlow(option);
+    <ResponsiveProvider>
+      <div style={{ width: '100%', height: '100%' }}>
+        <ReactFlow
+          ref={flowRef}
+          nodes={augmentedNodes}
+          edges={augmentedEdges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onConnect={onConnect}
+          nodeTypes={NODE_TYPES}
+          fitView
+          fitViewOptions={{ padding: 0.2 }}
+          minZoom={0.1}
+          maxZoom={4}
+          style={{ width: '100%', height: '100%' }}
+          onNodeClick={handleNodeClick}
+          onNodeMouseEnter={handleNodeMouseEnter}
+          onNodeMouseLeave={handleNodeMouseLeave}
+          nodesDraggable={false}
+          proOptions={{ hideAttribution: true }}
+        >
+          <Controls>
+            <ControlButton
+              onClick={handleControlButtonClick}
+            >
+              <FaBeer />
+            </ControlButton>
+            <ControlButton
+              onClick={toggleHoverBehavior}
+              className={`hover - toggle ${hoverEnabled ? 'active' : ''} `}
+              title={hoverEnabled ? 'Disable Hover' : 'Enable Hover'}
+            >
+              {hoverEnabled ? <TbEyeCheck /> : <TbEyeCancel />}
+            </ControlButton>
+            <ControlButton
+              onClick={toggleOperations}
+              className={`operations - toggle ${showOperations ? 'active' : ''} `}
+              title={showOperations ? 'Hide Operations' : 'Show Operations'}
+            >
+              <TbPercentage />
+            </ControlButton>
+          </Controls>
+          <Background variant="dots" gap={12} size={1} />
+          {activeNode && connectedNodes.left && (
+            <div
+              onMouseEnter={handlePanelMouseEnter}
+              onMouseLeave={handlePanelMouseLeave}
+            >
+              <InfoPanel
+                key={JSON.stringify(indexSizes)}
+                node={activeNode}
+                connectedNodes={connectedNodes}
+                onSwapChildren={swapChildren}
+                onShowContraction={showContraction}
+                onClose={() => {
+                  setSelectedNode(null);
+                  setHoveredNode(null);
+                  setConnectedNodes([]);
                 }}
-              >
-                {`Option ${option.slice(-1)} `}
-              </div>
-            ))}
-          </div>,
-          document.body
-        )}
-      </ReactFlow>
-    </div>
+                initialPosition={{ x: 12, y: 8 }}
+                indexSizes={indexSizes}
+                showSizes={showSizes}
+                onToggleSizes={handleToggleSizes}
+              />
+            </div>
+          )}
+          {showPanel && createPortal(
+            <div
+              ref={panelRef}
+              className="fixed bg-white border border-gray-200 p-3 w-48 shadow-md rounded-md z-50 text-sm"
+              style={{
+                left: `${panelPosition.x} px`,
+                top: `${panelPosition.y} px`
+              }}
+            >
+              <h3 className="text-base font-medium mb-1">Choose an option:</h3>
+              {Object.values(LayoutOptionType).map(option => (
+                <div
+                  key={option}
+                  className="cursor-pointer hover:bg-gray-100 rounded p-1.5 text-sm"
+                  onClick={() => {
+                    handleOptionClickFlow(option);
+                  }}
+                >
+                  {`Option ${option.slice(-1)} `}
+                </div>
+              ))}
+            </div>,
+            document.body
+          )}
+        </ReactFlow>
+      </div>
+    </ResponsiveProvider>
   );
 };
 

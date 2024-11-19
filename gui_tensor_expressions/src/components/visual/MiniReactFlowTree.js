@@ -1,20 +1,22 @@
 import React, { useMemo, useState, useRef, useCallback } from 'react';
 import ReactFlow, {
-  Background, 
+  Background,
   Handle,
   Position,
   ReactFlowProvider
 } from 'reactflow';
 import { createPortal } from 'react-dom';
+import { useResponsive } from '../context/ResponsiveContext';
 
 const MiniReactFlowTree = ({ node, left, right, dimTypes }) => {
+  const { miniFlow } = useResponsive();
   const [tooltip, setTooltip] = useState(null);
   const nodeRefs = useRef({});
   const timeoutRef = useRef(null);
 
   const determineDimensionType = (letter) => {
     if (!dimTypes) return 'O';
-    
+
     const inC = (dimTypes.primitive?.cb || []).includes(letter) || (dimTypes.loop?.bc || []).includes(letter);
     const inM = (dimTypes.primitive?.mb || []).includes(letter) || (dimTypes.loop?.bm || []).includes(letter);
     const inN = (dimTypes.primitive?.nb || []).includes(letter) || (dimTypes.loop?.bn || []).includes(letter);
@@ -39,11 +41,11 @@ const MiniReactFlowTree = ({ node, left, right, dimTypes }) => {
 
   const createColoredLabel = (nodeType) => {
     let text;
-    if(nodeType === 'root') {
+    if (nodeType === 'root') {
       text = node;
-    } else if(nodeType === 'left') {
+    } else if (nodeType === 'left') {
       text = left;
-    } else if(nodeType === 'right') {
+    } else if (nodeType === 'right') {
       text = right;
     }
 
@@ -57,8 +59,9 @@ const MiniReactFlowTree = ({ node, left, right, dimTypes }) => {
     }
 
     const fullText = text.join('');
-    const shouldTruncate = fullText.length > 12;
-    
+    const truncateThreshold = miniFlow.nodeWidth < 100 ? 8 : 12;
+    const shouldTruncate = fullText.length > truncateThreshold;
+
     const createColoredHtml = (letters) => {
       return letters
         .map((letter) => {
@@ -69,10 +72,10 @@ const MiniReactFlowTree = ({ node, left, right, dimTypes }) => {
         .join(',');
     };
 
-    const truncatedHtml = shouldTruncate ? 
-      '...' + createColoredHtml(text.slice(-5)) :
+    const truncatedHtml = shouldTruncate ?
+      '...' + createColoredHtml(text.slice(-3)) :
       createColoredHtml(text);
-    
+
     const fullColoredHtml = createColoredHtml(text);
 
     return {
@@ -84,7 +87,7 @@ const MiniReactFlowTree = ({ node, left, right, dimTypes }) => {
   };
 
   const CustomNode = ({ data, id }) => (
-    <div 
+    <div
       className="relative w-full h-full"
       ref={el => nodeRefs.current[id] = el}
     >
@@ -105,41 +108,57 @@ const MiniReactFlowTree = ({ node, left, right, dimTypes }) => {
       id: type,
       position,
       data: { html, fullText, fullColoredHtml, shouldTruncate },
-      style: { 
-        width: 150,
-        height: 35,
-        fontSize: '16px',
+      style: {
+        width: miniFlow.nodeWidth,
+        height: miniFlow.nodeHeight,
+        fontSize: `${miniFlow.fontSize}px`,
         border: '1px solid #ccc',
         borderRadius: '4px',
         backgroundColor: 'white',
-        padding: 0, // Remove padding
-        display: 'flex', // Use flexbox
-        alignItems: 'center', // Center vertically
-        justifyContent: 'center' // Center horizontally
+        padding: 0,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
       }
     };
   };
 
-  const nodes = [
-    createNodeData('root', { x: 100, y: 0 }),
-    createNodeData('left', { x: 0, y: 60 }),
-    createNodeData('right', { x: 200, y: 60 }),
-  ];
+  const nodes = useMemo(() => {
+    const centerX = miniFlow.width / 2;
+    const rootX = centerX - (miniFlow.nodeWidth / 2);
+    const verticalSpacing = miniFlow.height * 0.6;
+    const horizontalSpacing = miniFlow.width * 0.3;
 
-  const edges = [
-    { 
-      id: 'root-left', 
-      source: 'root', 
+    return [
+      createNodeData('root', {
+        x: rootX,
+        y: 0
+      }),
+      createNodeData('left', {
+        x: centerX - horizontalSpacing - (miniFlow.nodeWidth / 2),
+        y: verticalSpacing
+      }),
+      createNodeData('right', {
+        x: centerX + horizontalSpacing - (miniFlow.nodeWidth / 2),
+        y: verticalSpacing
+      }),
+    ];
+  }, [miniFlow, node, left, right]);
+
+  const edges = useMemo(() => [
+    {
+      id: 'root-left',
+      source: 'root',
       target: 'left',
       style: { stroke: '#999' }
     },
-    { 
-      id: 'root-right', 
-      source: 'root', 
+    {
+      id: 'root-right',
+      source: 'root',
       target: 'right',
       style: { stroke: '#999' }
     },
-  ];
+  ], []);
 
   const nodeTypes = useMemo(() => ({
     default: CustomNode,
@@ -152,16 +171,16 @@ const MiniReactFlowTree = ({ node, left, right, dimTypes }) => {
     }
   }, []);
 
-  const handleNodeMouseEnter = (event, node) => {    
-    if (node.data.shouldTruncate) {      
+  const handleNodeMouseEnter = (event, node) => {
+    if (node.data.shouldTruncate) {
       clearTooltipTimeout();
       const element = nodeRefs.current[node.id];
       if (!element) return;
-      
+
       const rect = element.getBoundingClientRect();
       const tooltipY = rect.top - 55;
       const tooltipX = rect.left + (rect.width / 2);
-      
+
       setTooltip({
         content: node.data.fullColoredHtml,
         x: tooltipX,
@@ -174,24 +193,31 @@ const MiniReactFlowTree = ({ node, left, right, dimTypes }) => {
     clearTooltipTimeout();
     timeoutRef.current = setTimeout(() => {
       setTooltip(null);
-    }, 100); 
+    }, 100);
   };
 
-  // Cleanup timeout on unmount
   React.useEffect(() => {
     return () => clearTooltipTimeout();
   }, [clearTooltipTimeout]);
 
   return (
     <ReactFlowProvider>
-      <div className="w-[400px] h-[120px] relative">
+      <div style={{
+        width: `${miniFlow.width}px`,
+        height: `${miniFlow.height}px`,
+        position: 'relative',
+        overflow: 'hidden'
+      }}>
         <ReactFlow
           nodes={nodes}
           edges={edges}
           fitView
           fitViewOptions={{
-            padding: 0.2 // Add some padding around the view
+            padding: 0.1,
+            minZoom: 1,
+            maxZoom: 1
           }}
+          proOptions={{ hideAttribution: true }}
           zoomOnScroll={false}
           panOnScroll={false}
           nodesDraggable={false}

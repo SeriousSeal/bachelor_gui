@@ -50,6 +50,7 @@ const EinsumTreeVisualizer = () => {
   };
 
   const handleTreeUpdate = (indexSizes) => {
+    setIndexSizes(indexSizes);
     tree.updateIndexSizes(indexSizes);
 
     // Calculate new total operations and update tree nodes
@@ -74,6 +75,14 @@ const EinsumTreeVisualizer = () => {
       }
       return node;
     });
+
+    if (selectedNode) {
+      const updatedSelectedNode = findNodeInTree(tree.getRoot(), selectedNode.id);
+      if (updatedSelectedNode) {
+        setSelectedNodeOperations(updatedSelectedNode.operations);
+      }
+    }
+
 
     setNodes1(updatedNodes);
 
@@ -122,7 +131,7 @@ const EinsumTreeVisualizer = () => {
       if (unorderedTree.value && Array.isArray(unorderedTree.value)) {
         for (const indice of unorderedTree.value) {
           if (!newIndexSizes[indice]) {
-            newIndexSizes[indice] = 2; // Default size, adjust as needed
+            newIndexSizes[indice] = 2;
           }
         }
       }
@@ -284,6 +293,7 @@ const EinsumTreeVisualizer = () => {
                     onConnect={onConnect1}
                     onNodeClick={onNodeClick}
                     tree={tree}
+                    indexSizes={indexSizes}
                     totalOperations={totalOperations}
                     fitViewFunction={(fn) => (fitViewFunctions.current.tree1 = fn)}
                     handleOptionClick={handleOptionClick}

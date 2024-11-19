@@ -291,20 +291,56 @@ export const calculateTotalOperations = (indexSizes, tree) => {
     }
   };
 
-  // Second pass: Calculate percentages
-  const calculatePercentages = (node) => {
+  // Second pass: Calculate raw percentages
+  const calculateRawPercentages = (node) => {
     if (node.left && node.right) {
       node.operationsPercentage = (node.operations / totalOperations) * 100;
       node.totalOperations = totalOperations;
 
-      calculatePercentages(node.left);
-      calculatePercentages(node.right);
+      calculateRawPercentages(node.left);
+      calculateRawPercentages(node.right);
     }
   };
 
+  // Helper function to find min and max from calculated percentages
+  const findMinMaxPercentages = (node, percentages = []) => {
+    if (node.left && node.right) {
+      percentages.push(node.operationsPercentage);
+      findMinMaxPercentages(node.left, percentages);
+      findMinMaxPercentages(node.right, percentages);
+    }
+    return percentages;
+  };
+
+  // Helper function to normalize percentage to 0-100 scale
+  const normalizePercentage = (value, min, max) => {
+    return ((value - min) / (max - min)) * 100;
+  };
+
+  // Final pass: Add normalized percentages
+  const addNormalizedPercentages = (node, minPercentage, maxPercentage) => {
+    if (node.left && node.right) {
+      node.normalizedPercentage = normalizePercentage(
+        node.operationsPercentage,
+        minPercentage,
+        maxPercentage
+      );
+
+      addNormalizedPercentages(node.left, minPercentage, maxPercentage);
+      addNormalizedPercentages(node.right, minPercentage, maxPercentage);
+    }
+  };
+
+  // Execute all passes
   calculateTotal(tree);
   tree.totalOperations = totalOperations;
-  calculatePercentages(tree);
+  calculateRawPercentages(tree);
+
+  const percentages = findMinMaxPercentages(tree);
+  const minPercentage = Math.min(...percentages);
+  const maxPercentage = Math.max(...percentages);
+
+  addNormalizedPercentages(tree, minPercentage, maxPercentage);
 
   return totalOperations;
-}
+};

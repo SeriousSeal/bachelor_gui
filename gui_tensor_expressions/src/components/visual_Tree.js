@@ -39,7 +39,8 @@ const buildVisualizationTree = (root) => {
       right: d.data.right?.value,
       operations: d.data.operations,  // Add operations information
       totalOperations: d.data.totalOperations,  // Add total operations
-      operationsPercentage: d.data.operationsPercentage,  // Add operations percentage
+      operationsPercentage: d.data.operationsPercentage,  // Add operations percentage	
+      normalizedPercentage: d.data.normalizedPercentage,  // Add normalized percentage
       depth: d.depth  // Add depth information
     },
     position: {
