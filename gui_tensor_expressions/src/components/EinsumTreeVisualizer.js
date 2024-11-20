@@ -6,7 +6,7 @@ import HistoryPanel from './visual/HistoryPanel';
 import IndexSizeInput from './visual/IndexSizeInput';
 import CollapsiblePanel from './visual/CollapsiblePanel';
 import CustomPanelResizeHandle from './visual/CustomPanelResizeHandle';
-import buildVisualizationTree from './visual_Tree';
+import buildVisualizationTree from './layout';
 import { LayoutOptionType } from './constants';
 import { calculateTotalOperations } from './dimsAndOps';
 import {
@@ -277,6 +277,62 @@ const EinsumTreeVisualizer = () => {
     }
   };
 
+  const swapChildren = useCallback((nodeToSwap) => {
+    return new Promise((resolve) => {
+      if (!nodeToSwap || !nodeToSwap.data.left || !nodeToSwap.data.right || !tree) {
+        resolve(null);
+        return;
+      }
+
+      // Create a new tree instance using the clone method
+      const newTree = tree.clone();
+
+      // Swap children in the new tree
+      newTree.swapChildren(nodeToSwap.id);
+
+      // Update the tree state
+      setTree(newTree);
+
+      // Get updated tree representation
+      const treeString = newTree.treeToString();
+      setEinsumExpression(treeString);
+
+      // Calculate new operations
+      const totalOps = calculateTotalOperations(indexSizes, newTree.getRoot());
+      setTotalOperations(totalOps);
+
+      // Rebuild visualization with new tree structure
+      const { nodes, edges } = buildVisualizationTree(newTree.getRoot());
+
+      // Update nodes and edges
+      setNodes1(nodes);
+      setEdges1(edges);
+
+      // Update history
+      setHistory(prevHistory => {
+        const newItem = { expression: treeString, nodes, edges, indexSizes: indexSizes, tree: newTree };
+        const existingIndex = prevHistory.findIndex(item => item.expression === treeString);
+
+        let updatedHistory;
+        if (existingIndex !== -1) {
+          updatedHistory = [
+            newItem,
+            ...prevHistory.slice(0, existingIndex),
+            ...prevHistory.slice(existingIndex + 1)
+          ];
+        } else {
+          updatedHistory = [newItem, ...prevHistory];
+        }
+
+        return updatedHistory.slice(0, 5);
+      });
+
+
+      // Resolve with the updated tree
+      resolve(newTree);
+    });
+  }, [indexSizes, tree, setNodes1, setEdges1, setHistory, setTree, setTotalOperations, buildVisualizationTree]);
+
   return (
     <div className="h-screen bg-gray-50">
       <PanelGroup direction="horizontal" className="h-full">
@@ -297,6 +353,7 @@ const EinsumTreeVisualizer = () => {
                     totalOperations={totalOperations}
                     fitViewFunction={(fn) => (fitViewFunctions.current.tree1 = fn)}
                     handleOptionClick={handleOptionClick}
+                    swapChildren={swapChildren}
                   />
                 </ReactFlowProvider>
               </Panel>

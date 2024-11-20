@@ -6,7 +6,7 @@ import { TbArrowsExchange } from "react-icons/tb";
 
 import { isEqual } from "lodash";
 
-const InfoPanel = ({ node, connectedNodes, onSwapChildren, onShowContraction, onClose, initialPosition, indexSizes, showSizes, onToggleSizes }) => {
+const InfoPanel = ({ node, connectedNodes, onClose, initialPosition, indexSizes, showSizes, onToggleSizes, swapChildren }) => {
   const { panelWidth, fontSize, padding, miniFlow, showMiniFlow } = useResponsive();
   const [position, setPosition] = useState(initialPosition);
   const [isDragging, setIsDragging] = useState(false);
@@ -21,9 +21,8 @@ const InfoPanel = ({ node, connectedNodes, onSwapChildren, onShowContraction, on
   }, [connectedNodes, indexSizes]);
 
   const dimTypes = useMemo(() => {
-    const result = dimensionTypes(connectedNodes.value, connectedNodes.left?.value, connectedNodes.right?.value);
-    return result;
-  }, [connectedNodes]);
+    return dimensionTypes(connectedNodes.value, connectedNodes.left?.value, connectedNodes.right?.value);
+  }, [connectedNodes.value, connectedNodes.left?.value, connectedNodes.right?.value]);
 
   const isEmptyDimTypes = useMemo(() =>
     Object.values(dimTypes).every(category =>
@@ -155,6 +154,29 @@ const InfoPanel = ({ node, connectedNodes, onSwapChildren, onShowContraction, on
     };
   }, [isDragging, handleMouseMove]);
 
+  const swapButtonStyle = {
+    padding: '6px 12px',
+    backgroundColor: '#f3f4f6',
+    border: '1px solid #e5e7eb',
+    borderRadius: '6px',
+    color: '#374151',
+    fontSize: '14px',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    margin: '8px auto',
+    transition: 'all 0.2s ease-in-out',
+    ':hover': {
+      backgroundColor: '#e5e7eb',
+    }
+  };
+
+  const handleSwap = useCallback(async (e) => {
+    e.stopPropagation();
+    await swapChildren(node);
+  }, [node, swapChildren]);
+
   return (
     <div
       ref={panelRef}
@@ -173,14 +195,25 @@ const InfoPanel = ({ node, connectedNodes, onSwapChildren, onShowContraction, on
             <span style={{ ...letterStyle, color: '#b2df8a' }}>K</span>
           </div>
           <div>
-            <div className="mt-4 mb-4 flex justify-center">
+            <div className="mt-4 mb-2 flex justify-center">
               <MiniReactFlowTree
+                key={`${connectedNodes.value}-${connectedNodes.left?.value}-${connectedNodes.right?.value}`}
                 node={connectedNodes.value}
                 left={connectedNodes.left?.value}
                 right={connectedNodes.right?.value}
                 dimTypes={dimTypes}
               />
             </div>
+            {node.data.left && node.data.right && (
+              <button
+                className="flex items-center justify-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-md text-sm text-gray-700 transition-colors duration-200 mx-auto mb-2"
+                onClick={handleSwap}
+                title="Swap Left and Right Children"
+              >
+                <TbArrowsExchange size={16} />
+                Swap Children
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -288,5 +321,7 @@ export default React.memo(InfoPanel, (prevProps, nextProps) =>
   isEqual(prevProps.connectedNodes, nextProps.connectedNodes) &&
   isEqual(prevProps.indexSizes, nextProps.indexSizes) &&
   prevProps.showSizes === nextProps.showSizes &&
-  prevProps.onToggleSizes === nextProps.onToggleSizes
+  prevProps.onToggleSizes === nextProps.onToggleSizes &&
+  isEqual(prevProps.node, nextProps.node) &&
+  prevProps.swapChildren === nextProps.swapChildren
 );

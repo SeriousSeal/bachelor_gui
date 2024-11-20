@@ -103,7 +103,8 @@ const Flow = ({
   tree = { getRoot: () => null }, // Default empty tree
   indexSizes = {},
   fitViewFunction,
-  handleOptionClick = () => { } // Default no-op function }) => {
+  handleOptionClick = () => { }, // Default no-op function
+  swapChildren = () => { } // Default no-op function
 }) => {
   const [hoveredNode, setHoveredNode] = useState(null);
   const [selectedNode, setSelectedNode] = useState(null);
@@ -186,7 +187,7 @@ const Flow = ({
 
   const findConnectedNodes = useCallback((lookUpNode, node) => {
     if (!lookUpNode) return null;
-    if (lookUpNode.value === node.data.label) {
+    if (lookUpNode.id === node.id) {
       return {
         value: lookUpNode.value,
         ...(lookUpNode.right && { left: lookUpNode.left }),
@@ -227,10 +228,6 @@ const Flow = ({
     }
   }, [findConnectedNodes, propOnNodeClick, tree]);
 
-  const swapChildren = useCallback(() => {
-    console.log('Swapping children of node:', selectedNode || hoveredNode);
-    // Implement the swap logic here
-  }, [selectedNode, hoveredNode]);
 
   const showContraction = useCallback(() => {
     console.log('Showing contraction of node:', selectedNode || hoveredNode);
@@ -279,6 +276,20 @@ const Flow = ({
     setShowSizes(prev => !prev);
   }, []);
 
+  // Add handler for swap operation
+  const handleSwapChildren = useCallback(async (node) => {
+    // Wait for the tree to be updated
+    const updatedTree = await swapChildren(node);
+
+    if (updatedTree) {
+      // Get the updated connected nodes from the new tree
+      const updatedConnectedNodes = findConnectedNodes(updatedTree.getRoot(), node);
+
+      // Update the states with the new data
+      setConnectedNodes(updatedConnectedNodes);
+      setSelectedNode(node);
+    }
+  }, [swapChildren, findConnectedNodes]);
 
   const activeNode = selectedNode || hoveredNode;
 
@@ -332,11 +343,9 @@ const Flow = ({
               onMouseLeave={handlePanelMouseLeave}
             >
               <InfoPanel
-                key={JSON.stringify(indexSizes)}
+                key={`${connectedNodes.value}-${connectedNodes.left?.value}-${connectedNodes.right?.value}`}
                 node={activeNode}
                 connectedNodes={connectedNodes}
-                onSwapChildren={swapChildren}
-                onShowContraction={showContraction}
                 onClose={() => {
                   setSelectedNode(null);
                   setHoveredNode(null);
@@ -346,6 +355,7 @@ const Flow = ({
                 indexSizes={indexSizes}
                 showSizes={showSizes}
                 onToggleSizes={handleToggleSizes}
+                swapChildren={handleSwapChildren}
               />
             </div>
           )}

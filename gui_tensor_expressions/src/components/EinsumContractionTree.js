@@ -120,11 +120,34 @@ class Node {
   }
 }
 
+// Add this helper function to reconstruct Node objects
+function reconstructNode(nodeData) {
+  if (!nodeData) return null;
+
+  const node = new Node(nodeData.value);
+  node.id = nodeData.id;
+  node.string = nodeData.string;
+  node.sizes = nodeData.sizes;
+  node.left = reconstructNode(nodeData.left);
+  node.right = reconstructNode(nodeData.right);
+
+  return node;
+}
+
 export class Tree {
-  constructor(str) {
+  constructor(str = null) {
     nodeIdCounter = 0;
-    this.root = parseTree(str);
+    if (str) {
+      this.root = parseTree(str);
+    } else {
+      this.root = null;
+    }
     this.indexSizes = {};
+  }
+
+  setRoot(root) {
+    this.root = root;
+    return this;
   }
 
   getRoot() {
@@ -147,5 +170,61 @@ export class Tree {
 
     this.updateNodeSizes(node.left);
     this.updateNodeSizes(node.right);
+  }
+
+  // Add this method to the Tree class
+  treeToString(node = this.root) {
+    if (!node) return '';
+
+    let result = this._treeToStringHelper(node);
+
+    result = result.slice(1, -1);
+    return result;
+  }
+
+  // Add a helper method for the recursive string building
+  _treeToStringHelper(node) {
+    if (!node) return '';
+
+    // If it's a leaf node, return the array representation
+    if (node.isLeaf()) {
+      return `[${node.value.join(',')}]`;
+    }
+
+    // For nodes with children
+    if (node.right) {
+      // Case: node has both children
+      return `[${this._treeToStringHelper(node.left)},${this._treeToStringHelper(node.right)}->[${node.value.join(',')}]]`;
+    } else {
+      // Case: node has only left child
+      return `[${this._treeToStringHelper(node.left)}->[${node.value.join(',')}]]`;
+    }
+  }
+
+  // Add method to swap children
+  swapChildren(nodeId) {
+    const swapNodesInTree = (node) => {
+      if (!node) return false;
+
+      if (node.id === nodeId) {
+        // Swap the children
+        const temp = node.left;
+        node.left = node.right;
+        node.right = temp;
+        return true;
+      }
+
+      return swapNodesInTree(node.left) || swapNodesInTree(node.right);
+    };
+
+    swapNodesInTree(this.root);
+  }
+
+  // Add method to create a deep copy of the tree
+  clone() {
+    const newTree = new Tree();
+    newTree.root = reconstructNode(this.root);
+    newTree.indexSizes = { ...this.indexSizes };
+    return newTree;
   }
 }
