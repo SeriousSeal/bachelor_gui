@@ -1,4 +1,3 @@
-// Define the enum for options
 export const LayoutOptionType = {
     Option1: 'option1',
     Option2: 'option2', 

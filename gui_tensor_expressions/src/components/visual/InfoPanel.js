@@ -7,7 +7,7 @@ import { TbArrowsExchange } from "react-icons/tb";
 import { isEqual } from "lodash";
 
 const InfoPanel = ({ node, connectedNodes, onClose, initialPosition, indexSizes, showSizes, onToggleSizes, swapChildren }) => {
-  const { panelWidth, fontSize, padding, miniFlow, showMiniFlow } = useResponsive();
+  const { panelWidth, padding, miniFlow, showMiniFlow } = useResponsive();
   const [position, setPosition] = useState(initialPosition);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
@@ -56,33 +56,35 @@ const InfoPanel = ({ node, connectedNodes, onClose, initialPosition, indexSizes,
   const letterContainerStyle = {
     display: 'flex',
     flexDirection: 'column',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
+    alignItems: 'center',
     marginRight: '16px',
     marginLeft: '16px',
-    marginTop: '24px',
+    marginTop: '16px',
   };
 
   const letterStyle = {
-    fontSize: '20px',
+    fontSize: `${miniFlow.letterSize}px`,
     fontWeight: 'bold',
-    lineHeight: '1.5',
-    marginBottom: '4px',
+    lineHeight: '1.2',
+    marginBottom: '20px',
   };
 
   const reactFlowPanelStyle = {
     display: "flex",
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "center",
-    marginBottom: '16px',
-    maxWidth: '304px', // Match MiniReactFlowTree container width
-    margin: '0 auto', // Center the flow
+    marginBottom: '8px',
+    maxWidth: `${miniFlow.width}px`,
+    margin: '0 auto',
+    paddingTop: '8px',
   };
 
   const tableStyle = {
     width: '100%',
     borderCollapse: 'separate',
     borderSpacing: '0',
-    marginTop: '16px',
+    marginTop: '8px',
     backgroundColor: 'white',
     borderRadius: '8px',
     overflow: 'hidden',
@@ -154,23 +156,6 @@ const InfoPanel = ({ node, connectedNodes, onClose, initialPosition, indexSizes,
     };
   }, [isDragging, handleMouseMove]);
 
-  const swapButtonStyle = {
-    padding: '6px 12px',
-    backgroundColor: '#f3f4f6',
-    border: '1px solid #e5e7eb',
-    borderRadius: '6px',
-    color: '#374151',
-    fontSize: '14px',
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '6px',
-    margin: '8px auto',
-    transition: 'all 0.2s ease-in-out',
-    ':hover': {
-      backgroundColor: '#e5e7eb',
-    }
-  };
 
   const handleSwap = useCallback(async (e) => {
     e.stopPropagation();
