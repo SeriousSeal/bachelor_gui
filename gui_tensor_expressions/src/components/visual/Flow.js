@@ -344,7 +344,7 @@ const Flow = ({
             >
               <InfoPanel
                 key={`${connectedNodes.value}-${connectedNodes.left?.value}-${connectedNodes.right?.value}`}
-                node={activeNode}
+                node={hoveredNode ?? activeNode}
                 connectedNodes={connectedNodes}
                 onClose={() => {
                   setSelectedNode(null);

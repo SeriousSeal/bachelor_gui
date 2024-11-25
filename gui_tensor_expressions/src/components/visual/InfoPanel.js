@@ -158,9 +158,10 @@ const InfoPanel = ({ node, connectedNodes, onClose, initialPosition, indexSizes,
 
 
   const handleSwap = useCallback(async (e) => {
+    console.log(node)
     e.stopPropagation();
     await swapChildren(node);
-  }, [node, swapChildren]);
+  }, [swapChildren]);
 
   return (
     <div
