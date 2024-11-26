@@ -13,7 +13,7 @@ export const useResponsive = () => {
 export const ResponsiveProvider = ({ children }) => {
     const getResponsiveDimensions = (width, height) => {
         let heightObj = {}
-        if (height < 1050) {
+        if (height < 900) {
             heightObj = {
                 showMiniFlow: false,
                 miniFlow: {
@@ -51,7 +51,7 @@ export const ResponsiveProvider = ({ children }) => {
                 },
                 ...heightObj
             };
-        } else if (width < 1920) {
+        } else if (width < 2000) {
             return {
                 panelWidth: 360,
                 fontSize: 14,

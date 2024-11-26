@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import MiniReactFlowTree from './MiniReactFlowTree';
 import { dimensionTypes } from '../dimsAndOps';
-import { useResponsive } from '../context/ResponsiveContext';
+import { useResponsive } from '../utils/ResponsiveContext';
 import { TbArrowsExchange } from "react-icons/tb";
 
 import { isEqual } from "lodash";
@@ -161,7 +161,7 @@ const InfoPanel = ({ node, connectedNodes, onClose, initialPosition, indexSizes,
     console.log(node)
     e.stopPropagation();
     await swapChildren(node);
-  }, [swapChildren]);
+  }, [swapChildren, node]);
 
   return (
     <div

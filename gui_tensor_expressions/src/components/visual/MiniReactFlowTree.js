@@ -6,7 +6,7 @@ import ReactFlow, {
   ReactFlowProvider
 } from 'reactflow';
 import { createPortal } from 'react-dom';
-import { useResponsive } from '../context/ResponsiveContext';
+import { useResponsive } from '../utils/ResponsiveContext';
 
 const MiniReactFlowTree = ({ node, left, right, dimTypes }) => {
   const { miniFlow } = useResponsive();
@@ -143,7 +143,7 @@ const MiniReactFlowTree = ({ node, left, right, dimTypes }) => {
         y: verticalSpacing
       }),
     ];
-  }, [miniFlow, node, left, right]);
+  }, [miniFlow]);
 
   const edges = useMemo(() => [
     {

@@ -13,7 +13,7 @@ import ReactFlow, {
   ControlButton
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { ResponsiveProvider } from '../context/ResponsiveContext';
+import { ResponsiveProvider } from '../utils/ResponsiveContext';
 
 const NODE_TYPES = {
   custom: React.memo(({ data }) => {
@@ -201,7 +201,7 @@ const Flow = ({
   }, []);
 
   const handleNodeMouseEnter = useCallback((event, node) => {
-    if (!hoverEnabled) return; // Früher Return wenn Hover deaktiviert ist
+    if (!hoverEnabled || selectedNode) return; // Früher Return wenn Hover deaktiviert ist
     if (selectedNode && !node.data.right) return; // Früher Return wenn Node keine Kinder hat
     console.log(node)
 
@@ -227,13 +227,6 @@ const Flow = ({
       propOnNodeClick(event, node);
     }
   }, [findConnectedNodes, propOnNodeClick, tree]);
-
-
-  const showContraction = useCallback(() => {
-    console.log('Showing contraction of node:', selectedNode || hoveredNode);
-    // Implement the show contraction logic here
-  }, [selectedNode, hoveredNode]);
-
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -344,7 +337,7 @@ const Flow = ({
             >
               <InfoPanel
                 key={`${connectedNodes.value}-${connectedNodes.left?.value}-${connectedNodes.right?.value}`}
-                node={hoveredNode ?? activeNode}
+                node={activeNode ?? hoveredNode}
                 connectedNodes={connectedNodes}
                 onClose={() => {
                   setSelectedNode(null);
