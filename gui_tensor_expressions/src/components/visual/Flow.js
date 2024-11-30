@@ -87,9 +87,32 @@ const NODE_TYPES = {
   })
 };
 
+const colorGradient = (fadeFraction, rgbColor1, rgbColor2) => {
+  var color1 = rgbColor1;
+  var color2 = rgbColor2;
+  var fade = fadeFraction;
+
+  var diffRed = color2.red - color1.red;
+  var diffGreen = color2.green - color1.green;
+  var diffBlue = color2.blue - color1.blue;
+
+  var gradient = {
+    red: parseInt(Math.floor(color1.red + (diffRed * fade)), 10),
+    green: parseInt(Math.floor(color1.green + (diffGreen * fade)), 10),
+    blue: parseInt(Math.floor(color1.blue + (diffBlue * fade)), 10),
+  };
+
+  return 'rgb(' + gradient.red + ',' + gradient.green + ',' + gradient.blue + ')';
+};
+
 const getColorForPercentage = (percentage) => {
-  const value = percentage / 100;
-  return `hsl(0, ${value * 100}%, ${70 - (value * 20)}%)`;
+  const fadeFraction = percentage / 100;
+
+  const redColor = { red: 255, green: 0, blue: 0 };
+  const greyColor = { red: 128, green: 128, blue: 128 };
+
+  const color = colorGradient(fadeFraction, redColor, greyColor);
+  return color;
 };
 
 
