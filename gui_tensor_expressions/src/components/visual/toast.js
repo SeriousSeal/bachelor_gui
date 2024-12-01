@@ -73,8 +73,9 @@ export const Toast = (function() {
 
     // Set timeout to hide the toast
     hideTimeoutId = setTimeout(() => {
-      currentToast.classList.remove('show');
-      
+      if (currentToast) {
+        currentToast.classList.remove('show');
+      }
       // Remove the toast after the transition
       setTimeout(() => {
         if (currentToast && currentToast.parentNode) {

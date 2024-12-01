@@ -40,10 +40,9 @@ const NODE_TYPES = {
     return (
       <div style={{
         background: '#fff',
-        border: '1px solid #777',
+        border: data.isFaulty ? '2px solid red' : '1px solid #777',
         borderRadius: '8px',
-        width: `${displayData.nodeWidth
-          }px`,
+        width: `${displayData.nodeWidth}px`,
         height: displayData.operationPercentage ? '60px' : '40px',
         display: 'flex',
         flexDirection: 'column',
@@ -111,7 +110,7 @@ const getColorForPercentage = (percentage) => {
   const redColor = { red: 255, green: 0, blue: 0 };
   const greyColor = { red: 128, green: 128, blue: 128 };
 
-  const color = colorGradient(fadeFraction, redColor, greyColor);
+  const color = colorGradient(fadeFraction, greyColor, redColor);
   return color;
 };
 

@@ -50,16 +50,26 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
     }
   };
 
-  const handleTreeUpdate = (indexSizes) => {
+  const handleTreeUpdate = useCallback((indexSizes) => {
+    
+    const findNodeInTree = (treeNode, id) => {
+      if (!treeNode) return null;
+      if (treeNode.id === id) return treeNode;
+      const leftResult = findNodeInTree(treeNode.left, id);
+      if (leftResult) return leftResult;
+      return findNodeInTree(treeNode.right, id);
+    };
+
     setIndexSizes(indexSizes);
     tree.updateIndexSizes(indexSizes);
 
     // Calculate new total operations and update tree nodes
-    const totalOps = calculateTotalOperations(indexSizes, tree.getRoot());
-    setTotalOperations(totalOps);
+    const { totalOperations, faultyNodes } = calculateTotalOperations(indexSizes, tree.getRoot());
+    setTotalOperations(totalOperations);
 
-    // Update nodes with new operation values
+    // Update nodes with new operation values and mark faulty nodes
     const updatedNodes = nodes1.map(node => {
+      const isFaulty = faultyNodes.some(faultyNode => faultyNode.id === node.id);
       if (node.data && node.data.left && node.data.right) {
         const nodeInTree = findNodeInTree(tree.getRoot(), node.id);
         if (nodeInTree) {
@@ -69,12 +79,13 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
               ...node.data,
               operations: nodeInTree.operations,
               operationsPercentage: nodeInTree.operationsPercentage,
-              totalOperations: nodeInTree.totalOperations
+              totalOperations: nodeInTree.totalOperations,
+              isFaulty: isFaulty
             }
           };
         }
       }
-      return node;
+      return { ...node, data: { ...node.data, isFaulty: isFaulty } };
     });
 
     if (selectedNode) {
@@ -83,7 +94,6 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
         setSelectedNodeOperations(updatedSelectedNode.operations);
       }
     }
-
 
     setNodes1(updatedNodes);
 
@@ -101,23 +111,9 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
         ...prevHistory.slice(1)
       ];
     });
-  };
+  }, [nodes1, selectedNode, tree, setNodes1]);
 
-  // Helper function to find node in tree by label
-  const findNodeInTree = (treeNode, id) => {
-    if (!treeNode) return null;
-
-    if (treeNode.id === id) {
-      return treeNode;
-    }
-
-    const leftResult = findNodeInTree(treeNode.left, id);
-    if (leftResult) return leftResult;
-
-    return findNodeInTree(treeNode.right, id);
-  };
-
-  const parseInput = (einsumExpression) => {
+  const parseInput = useCallback((einsumExpression) => {
 
     const input = einsumExpression || "[41,10,11],[[9,10,24,25],[[[63,87,11],[81,87,24,25]->[11,24,25,63,81]],[[86,65,63],[[[[77,65,53,70],[70,75,81]->[53,65,75,77,81]],[[53,83,61],[61,75,22,23]->[22,23,53,75,83]]->[22,23,65,77,81,83]],[[[47,8,9],[7,8,22,23]->[7,9,22,23,47]],[[[31,40,41],[[39,40,46,47],[46,6,7]->[6,7,39,40,47]]->[6,7,31,39,41,47]],[[[[54,60,66],[[[59,76,77],[82,76,52,54]->[52,54,59,77,82]],[[85,57,82],[[64,78,85,59],[[79,78,86],[[80,79],[80,58,64]->[58,64,79]]->[58,64,78,86]]->[58,59,85,86]]->[57,58,59,82,86]]->[52,54,57,58,77,86]]->[52,57,58,60,66,77,86]],[[[52,84,71],[[45,4,5],[[3,4,18,19],[71,60,18,19]->[3,4,60,71]]->[3,5,45,60,71]]->[3,5,45,52,60,84]],[[[[33,38,39],[37,38,44,45]->[33,37,39,44,45]],[[32,36,37],[[29,30,32,33],[[26,28,29],[[26,27],[27,30,31]->[26,30,31]]->[28,29,30,31]]->[28,31,32,33]]->[28,31,33,36,37]]->[28,31,36,39,44,45]],[[44,2,3],[[[1,2,16,17],[74,84,16,17]->[1,2,74,84]],[[[28,34,35],[[35,36,42,43],[43,0,1]->[0,1,35,36,42]]->[0,1,28,34,36,42]],[[[42,50,51],[51,0,14,15]->[0,14,15,42,50]],[[[[68,69,12,13],[[58,55,67],[55,48,68]->[48,58,67,68]]->[12,13,48,58,67,69]],[[[67,57,62,72],[72,56,74]->[56,57,62,67,74]],[[62,69,73],[73,56,14,15]->[14,15,56,62,69]]->[14,15,57,67,69,74]]->[12,13,14,15,48,57,58,74]],[[34,48,49],[49,50,12,13]->[12,13,34,48,50]]->[14,15,34,50,57,58,74]]->[0,34,42,57,58,74]]->[1,28,36,57,58,74]]->[2,28,36,57,58,84]]->[3,28,36,44,57,58,84]]->[3,31,39,45,57,58,84]]->[5,31,39,52,57,58,60]]->[5,31,39,66,77,86]],[[5,6,20,21],[66,83,20,21]->[5,6,66,83]]->[6,31,39,77,83,86]]->[7,41,47,77,83,86]]->[9,22,23,41,77,83,86]]->[9,41,65,81,86]]->[9,41,63,81]]->[9,11,24,25,41]]->[10,11,25,41]]->[11,25]";
     const tree = new Tree(input);
@@ -144,12 +140,12 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
     setIndexSizes(newIndexSizes);
 
     // Calculate total operations
-    const totalOps = calculateTotalOperations(newIndexSizes, unorderedTree);
-    setTotalOperations(totalOps);
+    const { totalOperations, faultyNodes } = calculateTotalOperations(newIndexSizes, unorderedTree);
+    setTotalOperations(totalOperations);
     console.log(unorderedTree)
 
 
-    const { nodes, edges } = buildVisualizationTree(unorderedTree);
+    const { nodes, edges } = buildVisualizationTree(unorderedTree, faultyNodes);
 
     setNodes1(nodes);
     setEdges1(edges);
@@ -178,7 +174,7 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
 
 
     setTimeout(() => fitView('tree1'), 0);
-  };
+  }, [setNodes1, setEdges1, setHistory, setTree, setTotalOperations]);
 
   const handleDataTypeChange = (event) => {
     setDataType(event.target.value);
@@ -300,11 +296,11 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
       setEinsumExpression(treeString);
 
       // Calculate new operations
-      const totalOps = calculateTotalOperations(indexSizes, newTree.getRoot());
+      const {totalOps, faultyNodes} = calculateTotalOperations(indexSizes, newTree.getRoot());
       setTotalOperations(totalOps);
 
       // Rebuild visualization with new tree structure
-      const { nodes, edges } = buildVisualizationTree(newTree.getRoot());
+      const { nodes, edges } = buildVisualizationTree(newTree.getRoot(), faultyNodes);
 
       // Update nodes and edges
       setNodes1(nodes);
@@ -335,16 +331,13 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
     });
   }, [indexSizes, tree, setNodes1, setEdges1, setHistory, setTree, setTotalOperations]);
 
-  // Add new state for share URL
-  const [shareUrl, setShareUrl] = useState('');
-
   // Separate useEffect for handling expression
   useEffect(() => {
     if (initialExpression) {
       setEinsumExpression(initialExpression);
       parseInput(initialExpression);
     }
-  }, [initialExpression]);
+  }, [initialExpression, parseInput]); // Add parseInput as a dependency
 
   // Separate useEffect for handling sizes, dependent on tree
   useEffect(() => {
@@ -352,12 +345,11 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
       setIndexSizes(initialSizes);
       handleTreeUpdate(initialSizes);
     }
-  }, [initialSizes, tree]); // Add tree as a dependency
+  }, [initialSizes, tree, handleTreeUpdate]); // Add handleTreeUpdate as a dependency
 
   // Add share button functionality
   const handleShare = useCallback(() => {
     const url = createShareableUrl(einsumExpression, indexSizes);
-    setShareUrl(url);
 
     // Copy to clipboard
     navigator.clipboard.writeText(url)

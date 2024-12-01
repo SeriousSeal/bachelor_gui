@@ -24,12 +24,14 @@ const InfoPanel = ({ node, connectedNodes, onClose, initialPosition, indexSizes,
     return dimensionTypes(connectedNodes.value, connectedNodes.left?.value, connectedNodes.right?.value);
   }, [connectedNodes.value, connectedNodes.left?.value, connectedNodes.right?.value]);
 
-  const isEmptyDimTypes = useMemo(() =>
-    Object.values(dimTypes).every(category =>
-      Object.values(category).every(arr => arr.length === 0)
-    ),
-    [dimTypes]
-  );
+  const isEmptyDimTypes = useMemo(() => {
+    if (dimTypes) {
+      return Object.values(dimTypes).every(category =>
+        Object.values(category).every(arr => arr.length === 0)
+      );
+    }
+    return true;
+  }, [dimTypes]);
 
   const panelStyle = {
     position: 'absolute',

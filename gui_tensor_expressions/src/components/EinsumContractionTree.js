@@ -9,6 +9,7 @@ function isLetterOrNumber(char) {
 function isValidArrayChar(char) {
   return /^[a-zA-Z0-9,[\]]$/.test(char);
 }
+
 export function parseTree(str) {
   let index = 0;
   str = str.replace(/\s/g, '');

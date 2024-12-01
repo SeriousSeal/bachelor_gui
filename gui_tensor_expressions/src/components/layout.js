@@ -1,6 +1,6 @@
 import { hierarchy, tree } from 'd3-hierarchy';
 
-const buildVisualizationTree = (root) => {
+const buildVisualizationTree = (root, faultyNodes = []) => {
   // First, count the total number of nodes to determine sizing
   const countNodes = (node) => {
     if (!node) return 0;
@@ -30,24 +30,28 @@ const buildVisualizationTree = (root) => {
   const treeRoot = treeLayout(hierarchyRoot);
 
   // Convert to nodes and edges format
-  const nodes = treeRoot.descendants().map((d, i) => ({
-    id: d.data.id,
-    type: 'custom',
-    data: {
-      label: d.data.value,
-      left: d.data.left?.value,
-      right: d.data.right?.value,
-      operations: d.data.operations,  // Add operations information
-      totalOperations: d.data.totalOperations,  // Add total operations
-      operationsPercentage: d.data.operationsPercentage,  // Add operations percentage	
-      normalizedPercentage: d.data.normalizedPercentage,  // Add normalized percentage
-      depth: d.depth  // Add depth information
-    },
-    position: {
-      x: d.x,
-      y: d.y
-    }
-  }));
+  const nodes = treeRoot.descendants().map((d, i) => {
+    const isFaulty = faultyNodes.some(faultyNode => faultyNode.id === d.data.id);
+    return {
+      id: d.data.id,
+      type: 'custom',
+      data: {
+        label: d.data.value,
+        left: d.data.left?.value,
+        right: d.data.right?.value,
+        operations: d.data.operations,  // Add operations information
+        totalOperations: d.data.totalOperations,  // Add total operations
+        operationsPercentage: d.data.operationsPercentage,  // Add operations percentage	
+        normalizedPercentage: d.data.normalizedPercentage,  // Add normalized percentage
+        depth: d.depth,  // Add depth information
+        isFaulty: isFaulty
+      },
+      position: {
+        x: d.x,
+        y: d.y
+      }
+    };
+  });
 
   const edges = treeRoot.links().map((link, i) => ({
     id: `edge-${i}`,

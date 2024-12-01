@@ -1,5 +1,5 @@
-
 import { cloneDeep } from "lodash";
+import { Toast } from './visual/toast.js';
 // Define dimension states and transitions
 const DimState = {
   INITIAL: 'INITIAL',
@@ -22,7 +22,8 @@ const PrimitiveDimType = {
   CB: 'cb',
   MB: 'mb',
   KB: 'kb',
-  NB: 'nb'
+  NB: 'nb',
+  RANDOM: 'random'
 };
 
 // Create an array of primitive types in order
@@ -31,6 +32,7 @@ const PRIMITIVE_DIM_ORDER = Object.values(PrimitiveDimType);
 
 class DimensionClassifier {
   constructor(node, left, right) {
+    this.clonedNode = cloneDeep(node);
     this.node = cloneDeep(node);
     this.left = cloneDeep(left);
     this.right = cloneDeep(right);
@@ -48,10 +50,16 @@ class DimensionClassifier {
   }
 
   classify() {
-    this.processLastIndices();
+    try {
+      this.processLastIndices();
 
-    // Second pass: Process remaining indices
-    this.processRemainingIndices();
+      // Second pass: Process remaining indices
+      this.processRemainingIndices();
+    } catch (error) {
+      console.error(error.message);
+      Toast.show(error.message);
+      return null;
+    }
 
     return this.dimTypes;
   }
@@ -61,39 +69,31 @@ class DimensionClassifier {
 
     // Process remaining left indices
     this.left?.reverse().forEach(element => {
-      const occurrence = this.checkOccurrence(element);
+      const occurrence = this.right.includes(element);
 
-      if (occurrence.inAll) {
-        this.addToLoop(DimType.BC, element);
-        this.removeFromAll(element);
-      } else if (occurrence.inNodeAndLeft) {
-        this.addToLoop(DimType.BM, element);
-        this.removeFromNodeAndLeft(element);
-      } else if (occurrence.inNodeAndRight) {
-        this.addToLoop(DimType.BN, element);
-        this.removeFromLeftAndRight(element);
-      } else if (occurrence.leftEqualsRight) {
+      if (occurrence) {
         this.addToLoop(DimType.BK, element);
         this.removeFromLeftAndRight(element);
+      }
+      else {
+        throw new Error(
+          `Node ${this.clonedNode} is faulty`
+        );
       }
     });
 
     // Process remaining right indices
     this.right?.reverse().forEach(element => {
-      const occurrence = this.checkOccurrence(element);
+      const occurrence = this.left.includes(element);
 
-      if (occurrence.inAll) {
-        this.addToLoop(DimType.BC, element);
-        this.removeFromAll(element);
-      } else if (occurrence.inNodeAndLeft) {
-        this.addToLoop(DimType.BM, element);
-        this.removeFromNodeAndLeft(element);
-      } else if (occurrence.inNodeAndRight) {
-        this.addToLoop(DimType.BN, element);
-        this.removeFromLeftAndRight(element);
-      } else if (occurrence.leftEqualsRight) {
+      if (occurrence) {
         this.addToLoop(DimType.BK, element);
         this.removeFromLeftAndRight(element);
+      }
+      else {
+        throw new Error(
+          `Node ${this.clonedNode} is faulty`
+        );
       }
     });
   }
@@ -102,19 +102,29 @@ class DimensionClassifier {
     for (let i = this.node.length - 1; i >= 0; i--) {
       const element = this.node[i];
       const occurrenceLast = this.checkOccurrenceLast(element);
-      const retCode = this.handleInitialState(element, occurrenceLast);
+      let retCode = this.handleInitialState(element, occurrenceLast);
 
+      if (retCode === 2) {
+        if(this.state === DimState.INITIAL) {
+          this.dimType = DimType.KB;
+        } else if(this.state === DimState.PRIMITIVE) {
+          const currentIndex = PRIMITIVE_DIM_ORDER.indexOf(this.dimType);
+          if (currentIndex === -1 || currentIndex + 1 >= PRIMITIVE_DIM_ORDER.length) {
+            this.dimType = DimType.NB;
+          } else {
+            this.dimType = PRIMITIVE_DIM_ORDER[currentIndex + 1];
+          }
+        }
+        this.state = DimState.LOOP;
+        retCode = this.handleLoopState(element);
+      }
+
+      
       if (retCode === 0) {
         continue;
       } else if (retCode === 1) {
         i++;
         continue;
-      }
-
-      if (retCode === 2) {
-        this.state = DimState.LOOP;
-        const occurrence = this.checkOccurrence(element);
-        this.handleLoopState(element, occurrence);
       }
     }
   }
@@ -126,22 +136,22 @@ class DimensionClassifier {
       this.addToPrimitive(DimType.CB, element);
       this.removeFromAll(element);
       return 0;
-    } else if (occurrence.inNodeAndLeft && this.acceptDimForPrimitive(DimType.MB)) {
+    } else if (occurrence.inNodeAndLeft && this.acceptDimForPrimitive(DimType.MB) && !this.right.includes(element)) {
       this.dimType = DimType.MB;
       this.state = DimState.PRIMITIVE;
       this.addToPrimitive(DimType.MB, element);
       this.state = DimState.PRIMITIVE;
       this.removeFromNodeAndLeft(element);
       return 0;
-    } else if (occurrence.leftEqualsRight && this.acceptDimForPrimitive(DimType.KB)) {
+    } else if (occurrence.leftEqualsRight && this.acceptDimForPrimitive(DimType.KB) && !this.node.includes(this.left[this.left.length - 1])) {
       this.dimType = DimType.KB;
       this.state = DimState.PRIMITIVE;
-      const lastLeft = this.left[this.left.length - 1];
+      const lastLeft = this.left[this.left.length - 1];      
       this.addToPrimitive(DimType.KB, lastLeft);
       this.state = DimState.PRIMITIVE;
       this.removeFromLeftAndRight(lastLeft);
       return 1;
-    } else if (occurrence.inNodeAndRight && this.acceptDimForPrimitive(DimType.NB)) {
+    } else if (occurrence.inNodeAndRight && this.acceptDimForPrimitive(DimType.NB) && !this.left.includes(element)) {
       this.dimType = DimType.NB;
       this.state = DimState.PRIMITIVE;
       this.addToPrimitive(DimType.NB, element);
@@ -152,19 +162,33 @@ class DimensionClassifier {
     return 2;
   }
 
-  handleLoopState(element, occurrence) {
+  handleLoopState(element) {    
+    const occurrence = this.checkOccurrence(element);
     if (occurrence.inAll) {
       this.addToLoop(DimType.BC, element);
       this.removeFromAll(element);
-    } else if (occurrence.inNodeAndLeft) {
+      return 0;
+    } else if (occurrence.inNodeAndLeft  && !this.right.includes(element)) {
       this.addToLoop(DimType.BM, element);
       this.removeFromNodeAndLeft(element);
-    } else if (occurrence.leftEqualsRight) {
-      this.addToLoop(DimType.BK, element);
-      this.removeFromLeftAndRight(element);
-    } else if (occurrence.inNodeAndRight) {
+      return 0;
+    } else if (occurrence.leftInRight && !this.node.includes(this.left[this.left.length - 1])) {
+      this.addToLoop(DimType.BK, this.left[this.left.length - 1]);
+      this.removeFromLeftAndRight(this.left[this.left.length - 1]);
+      return 1;
+    } else if (occurrence.rightInLeft && !this.node.includes(this.right[this.right.length - 1])) {
+      this.addToLoop(DimType.BK, this.right[this.right.length - 1]);
+      this.removeFromLeftAndRight(this.right[this.right.length - 1]);
+      return 1;    
+    } else if (occurrence.inNodeAndRight && !this.left.includes(element)) {
       this.addToLoop(DimType.BN, element);
       this.removeFromNodeAndRight(element);
+      return 0;
+    }
+    else {
+      throw new Error(
+        `Contraction ${this.clonedNode} is faulty`
+      );
     }
   }
 
@@ -172,7 +196,7 @@ class DimensionClassifier {
     const inNode = this.node.at(-1) === element;
     const inLeft = this.left?.at(-1) === element || false;
     const inRight = this.right?.at(-1) === element || false;
-    const leftEqualsRight = this.left[this.left.length - 1] === this.right[this.right.length - 1];
+    const leftEqualsRight = this.left.length > 0 && this.right.length > 0 && this.left[this.left.length - 1] === this.right[this.right.length - 1];
 
     return {
       inAll: inNode && inLeft && inRight,
@@ -186,13 +210,15 @@ class DimensionClassifier {
     const inNode = this.node.includes(element);
     const inLeft = this.left.includes(element);
     const inRight = this.right.includes(element);
-    const leftEqualsRight = this.left[this.left.length - 1] === this.right[this.right.length - 1];
+    const leftInRight = this.left.length > 0 && this.right.length > 0 && this.right.includes(this.left[this.left.length - 1]) ;
+    const rightInLeft = this.left.length > 0 && this.right.length > 0 && this.left.includes(this.right[this.right.length - 1]);
 
     return {
       inAll: inNode && inLeft && inRight,
       inNodeAndLeft: inNode && inLeft && !inRight,
       inNodeAndRight: inNode && !inLeft && inRight,
-      leftEqualsRight: leftEqualsRight
+      leftInRight: leftInRight,
+      rightInLeft: rightInLeft
     };
   }
 
@@ -207,18 +233,28 @@ class DimensionClassifier {
 
   // Helper methods for dimension management
   addToPrimitive(type, element) {
+    if(!element) {
+      throw new Error('Contraction faulty');
+    }
     if (this.processedIndices.has(element)) {
-      console.warn(`Index ${element} already processed`);
-      return;
+      const error = `Index ${element} already processed`
+      throw new Error(
+        error
+      );
     }
     this.dimTypes.primitive[type].push(element);
     this.processedIndices.add(element);
   }
 
   addToLoop(type, element) {
+    if(!element) {
+      throw new Error('Contraction faulty 1');
+    }
     if (this.processedIndices.has(element)) {
-      console.warn(`Index ${element} already processed`);
-      return;
+      const error = `Index ${element} already processed`
+      throw new Error(
+        error
+      );
     }
     this.dimTypes.loop[type].push(element);
     this.processedIndices.add(element);
@@ -277,18 +313,38 @@ export const calculateOperations = (dimTypes, indexSizes) => {
 
 export const calculateTotalOperations = (indexSizes, tree) => {
   let totalOperations = 0;
+  let faultyNodes = [];
+
+  const resetTreeOperations = (node) => {
+    if (node.left && node.right) {
+      node.operations = 0;
+      node.operationsPercentage = 0;
+      node.normalizedPercentage = 0;
+      resetTreeOperations(node.left);
+      resetTreeOperations(node.right);
+    }
+  };
 
   // First pass: Calculate total operations
   const calculateTotal = (node) => {
     if (node.left && node.right) {
       const dimtypes = dimensionTypes(node.value, node.left.value, node.right.value);
+      if (dimtypes === null) {
+        faultyNodes.push(node);
+        // Continue to check child nodes even if the current node is faulty
+        calculateTotal(node.left);
+        calculateTotal(node.right);
+        return 1;
+      }
       const operations = calculateOperations(dimtypes, indexSizes);
       node.operations = operations;
       totalOperations += operations;
 
-      calculateTotal(node.left);
-      calculateTotal(node.right);
+      if (calculateTotal(node.left) === 1 || calculateTotal(node.right) === 1) {
+        return 1;
+      }
     }
+    return 0;
   };
 
   // Second pass: Calculate raw percentages
@@ -333,6 +389,13 @@ export const calculateTotalOperations = (indexSizes, tree) => {
 
   // Execute all passes
   calculateTotal(tree);
+  if(faultyNodes.length > 0) {    
+    totalOperations = 0;
+    resetTreeOperations(tree);
+  }
+  if (totalOperations === 0) {
+    return {totalOperations, faultyNodes};
+  }
   tree.totalOperations = totalOperations;
   calculateRawPercentages(tree);
 
@@ -342,5 +405,5 @@ export const calculateTotalOperations = (indexSizes, tree) => {
 
   addNormalizedPercentages(tree, minPercentage, maxPercentage);
 
-  return totalOperations;
+  return {totalOperations, faultyNodes};
 };
