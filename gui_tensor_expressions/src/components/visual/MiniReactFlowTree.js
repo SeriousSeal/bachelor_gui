@@ -14,7 +14,7 @@ const MiniReactFlowTree = ({ node, left, right, dimTypes }) => {
   const nodeRefs = useRef({});
   const timeoutRef = useRef(null);
 
-  const determineDimensionType = (letter) => {
+  const determineDimensionType = useCallback((letter) => {
     if (!dimTypes) return 'O';
 
     const inC = (dimTypes.primitive?.cb || []).includes(letter) || (dimTypes.loop?.bc || []).includes(letter);
@@ -27,9 +27,9 @@ const MiniReactFlowTree = ({ node, left, right, dimTypes }) => {
     if (inN) return 'N';
     if (inK) return 'K';
     return 'O';
-  };
+  }, [dimTypes]);
 
-  const getLetterColor = (dimensionType) => {
+  const getLetterColor = useCallback((dimensionType) => {
     switch (dimensionType) {
       case 'C': return '#a6cee3';
       case 'M': return '#1f78b4';
@@ -37,9 +37,9 @@ const MiniReactFlowTree = ({ node, left, right, dimTypes }) => {
       case 'K': return '#b2df8a';
       default: return '#999';
     }
-  };
+  }, []);
 
-  const createColoredLabel = (nodeType) => {
+  const createColoredLabel = useCallback((nodeType) => {
     let text;
     if (nodeType === 'root') {
       text = node;
@@ -84,7 +84,7 @@ const MiniReactFlowTree = ({ node, left, right, dimTypes }) => {
       fullColoredHtml: fullColoredHtml,
       shouldTruncate
     };
-  };
+  }, [miniFlow, node, left, right, determineDimensionType, getLetterColor]);
 
   const CustomNode = ({ data, id }) => (
     <div
@@ -102,7 +102,7 @@ const MiniReactFlowTree = ({ node, left, right, dimTypes }) => {
     </div>
   );
 
-  const createNodeData = (type, position) => {
+  const createNodeData = useCallback((type, position) => {
     const { html, fullText, fullColoredHtml, shouldTruncate } = createColoredLabel(type);
     return {
       id: type,
@@ -121,7 +121,7 @@ const MiniReactFlowTree = ({ node, left, right, dimTypes }) => {
         justifyContent: 'center'
       }
     };
-  };
+  }, [miniFlow, createColoredLabel]);
 
   const nodes = useMemo(() => {
     const centerX = miniFlow.width / 2;
@@ -143,7 +143,7 @@ const MiniReactFlowTree = ({ node, left, right, dimTypes }) => {
         y: verticalSpacing
       }),
     ];
-  }, [miniFlow]);
+  }, [miniFlow, createNodeData]);
 
   const edges = useMemo(() => [
     {

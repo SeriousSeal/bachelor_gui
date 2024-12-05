@@ -142,8 +142,6 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
     // Calculate total operations
     const { totalOperations, faultyNodes } = calculateTotalOperations(newIndexSizes, unorderedTree);
     setTotalOperations(totalOperations);
-    console.log(unorderedTree)
-
 
     const { nodes, edges } = buildVisualizationTree(unorderedTree, faultyNodes);
 
