@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import InfoPanel from './InfoPanel';
-import { FaBeer } from 'react-icons/fa';
+import { TbLayoutDistributeHorizontal } from "react-icons/tb";
 import { TbEyeCancel, TbEyeCheck } from "react-icons/tb";
 import { createPortal } from 'react-dom';
 import { LayoutOptionType } from '../constants';
@@ -14,10 +14,7 @@ import ReactFlow, {
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { ResponsiveProvider } from '../utils/ResponsiveContext';
-import { scaleSequential } from 'd3-scale';
-import { interpolateCool } from 'd3-scale-chromatic';
 import { scaleLinear } from 'd3-scale';
-import { interpolateBlues } from 'd3-scale-chromatic';
 
 const NODE_TYPES = {
   custom: React.memo(({ data }) => {
@@ -253,7 +250,7 @@ const Flow = ({
   const handleControlButtonClick = useCallback((event) => {
     const button = event.currentTarget;
     const rect = button.getBoundingClientRect();
-    setPanelPosition({ x: rect.x + 30, y: rect.y });
+    setPanelPosition({ x: rect.right + 10, y: rect.top });
     setShowPanel(prev => !prev);
   }, []);
 
@@ -316,8 +313,9 @@ const Flow = ({
           <Controls>
             <ControlButton
               onClick={handleControlButtonClick}
+              title="Change Layout Options"
             >
-              <FaBeer />
+              <TbLayoutDistributeHorizontal />
             </ControlButton>
             <ControlButton
               onClick={toggleHoverBehavior}
@@ -329,7 +327,7 @@ const Flow = ({
             <ControlButton
               onClick={toggleOperations}
               className={`operations - toggle ${showOperations ? 'active' : ''} `}
-              title={showOperations ? 'Hide Operations' : 'Show Operations'}
+              title={showOperations ? 'Hide Operation Percentages' : 'Show Operation Percentages'}
             >
               <TbPercentage />
             </ControlButton>
@@ -362,8 +360,8 @@ const Flow = ({
               ref={panelRef}
               className="fixed bg-white border border-gray-200 p-3 w-48 shadow-md rounded-md z-50 text-sm"
               style={{
-                left: `${panelPosition.x} px`,
-                top: `${panelPosition.y} px`
+                left: panelPosition.x,
+                top: panelPosition.y
               }}
             >
               <h3 className="text-base font-medium mb-1">Choose an option:</h3>

@@ -1,6 +1,6 @@
-import { hierarchy, tree } from 'd3-hierarchy';
+import { hierarchy, tree, cluster } from 'd3-hierarchy';
 
-const buildVisualizationTree = (root, faultyNodes = []) => {
+const buildVisualizationTree = (root, faultyNodes = [], layoutOption = 'tree') => {
   // First, count the total number of nodes to determine sizing
   const countNodes = (node) => {
     if (!node) return 0;
@@ -18,16 +18,32 @@ const buildVisualizationTree = (root, faultyNodes = []) => {
     return [d.left, d.right].filter(child => child !== null && child !== undefined);
   });
 
-  // Create a tree layout with dynamic sizing and increased separation
-  const treeLayout = tree()
-    .size([width, height])
-    .separation((a, b) => {
-      // Increase horizontal separation, especially for sibling nodes
-      return (a.parent === b.parent) ? 1.5 : 2;
-    });
+  // Select layout based on option
+  let layout;
+  switch (layoutOption) {
+    case 'cluster':
+      layout = cluster()
+        .size([width, height])
+        .separation((a, b) => (a.parent === b.parent ? 1.5 : 2));
+      break;
+    case 'compact':
+      layout = tree()
+        .size([width, height/2])
+        .separation((a, b) => (a.parent === b.parent ? 1 : 1.2));
+      break;
+    case 'wide':
+      layout = tree()
+        .size([width * 1.5, height])
+        .separation((a, b) => (a.parent === b.parent ? 2 : 2.5));
+      break;
+    default: // 'tree'
+      layout = tree()
+        .size([width, height])
+        .separation((a, b) => (a.parent === b.parent ? 1.5 : 2));
+  }
 
-  // Apply the tree layout to compute node positions
-  const treeRoot = treeLayout(hierarchyRoot);
+  // Apply the selected layout
+  const treeRoot = layout(hierarchyRoot);
 
   // Convert to nodes and edges format
   const nodes = treeRoot.descendants().map((d, i) => {

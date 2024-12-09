@@ -33,6 +33,7 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
   const [sizeUnit, setSizeUnit] = useState('KiB'); // Default size unit
   const [totalOperations, setTotalOperations] = useState(0);
   const [selectedNodeOperations, setSelectedNodeOperations] = useState(0);
+  const [layoutOption, setLayoutOption] = useState(LayoutOptionType.Tree);
 
   const fitViewFunctions = useRef({ tree1: null });
   const onConnect1 = useCallback((params) => setEdges1((eds) => addEdge(params, eds)), [setEdges1]);
@@ -145,7 +146,7 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
     const { totalOperations, faultyNodes } = calculateTotalOperations(newIndexSizes, unorderedTree);
     setTotalOperations(totalOperations);
 
-    const { nodes, edges } = buildVisualizationTree(unorderedTree, faultyNodes);
+    const { nodes, edges } = buildVisualizationTree(unorderedTree, faultyNodes, layoutOption);
 
     setNodes1(nodes);
     setEdges1(edges);
@@ -174,7 +175,7 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
 
 
     setTimeout(() => fitView('tree1'), 0);
-  }, [setNodes1, setEdges1, setHistory, setTree, setTotalOperations]);
+  }, [setNodes1, setEdges1, setHistory, setTree, setTotalOperations, layoutOption]);
 
   const handleDataTypeChange = (event) => {
     setDataType(event.target.value);
@@ -253,25 +254,17 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
 
 
   const handleOptionClick = (option) => {
-    switch (option) {
-      case LayoutOptionType.Option1:
-        console.log('Processing Option 1');
-        // Add specific logic for Option 1
-        break;
-      case LayoutOptionType.Option2:
-        console.log('Processing Option 2');
-        // Add specific logic for Option 2
-        break;
-      case LayoutOptionType.Option3:
-        console.log('Processing Option 3');
-        // Add specific logic for Option 3
-        break;
-      case LayoutOptionType.Option4:
-        console.log('Processing Option 4');
-        // Add specific logic for Option 4
-        break;
-      default:
-        console.log('Unknown option selected');
+    // Validate that option is one of the defined layout types
+    if (Object.values(LayoutOptionType).includes(option)) {
+      setLayoutOption(option);
+      if (!tree) return;
+
+      const { faultyNodes } = calculateTotalOperations(indexSizes, tree.getRoot());
+      const { nodes, edges } = buildVisualizationTree(tree.getRoot(), faultyNodes, option);
+
+      setNodes1(nodes);
+      setEdges1(edges);
+      setTimeout(() => fitView('tree1'), 0);
     }
   };
 
@@ -426,8 +419,14 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
                       </div>
                       {selectedNodeOperations > 0 && (
                         <div className="text-lg mb-2">
-                          <span className="font-medium">Ops/Ops per Tree:&nbsp;</span>
+                          <span className="font-medium">#Ops/#Ops per Tree:&nbsp;</span>
                           {(selectedNodeOperations * 100 / totalOperations).toLocaleString()} %
+                        </div>
+                      )}
+                      {selectedNodeOperations > 0 && selectedNode?.data?.label && (
+                        <div className="text-lg mb-2">
+                          <span className="font-medium">#Ops/#Bytes:&nbsp;</span>
+                          {(tensorSizes(selectedNode.data.label) / selectedNodeOperations).toLocaleString()}
                         </div>
                       )}
                     </CollapsiblePanel>
