@@ -1,13 +1,13 @@
 {
   "files": {
     "main.css": "/bachelor_gui/static/css/main.f0715945.css",
-    "main.js": "/bachelor_gui/static/js/main.e7c99727.js",
+    "main.js": "/bachelor_gui/static/js/main.3fc341dd.js",
     "index.html": "/bachelor_gui/index.html",
     "main.f0715945.css.map": "/bachelor_gui/static/css/main.f0715945.css.map",
-    "main.e7c99727.js.map": "/bachelor_gui/static/js/main.e7c99727.js.map"
+    "main.3fc341dd.js.map": "/bachelor_gui/static/js/main.3fc341dd.js.map"
   },
   "entrypoints": [
     "static/css/main.f0715945.css",
-    "static/js/main.e7c99727.js"
+    "static/js/main.3fc341dd.js"
   ]
 }
