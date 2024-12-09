@@ -14,7 +14,7 @@ const IndexSizeInput = ({ indexSizes, setIndexSizes, onUpdate }) => {
 
   const [bulkInput, setBulkInput] = useState('');
   const [isEditing, setIsEditing] = useState(false);
-  const [tempIndexSizes, setTempIndexSizes] = useState(indexSizes);
+  const [tempIndexSizes, setTempIndexSizes] = useState(() => initializeTempSizes(indexSizes));
   const [activeTab, setActiveTab] = useState('individual');
 
   const sortedIndices = Object.keys(indexSizes).sort((a, b) => {
@@ -23,7 +23,11 @@ const IndexSizeInput = ({ indexSizes, setIndexSizes, onUpdate }) => {
   });
 
   useEffect(() => {
-    setTempIndexSizes(initializeTempSizes(indexSizes));
+    // Only update tempIndexSizes when indexSizes actually changes
+    const newTempSizes = initializeTempSizes(indexSizes);
+    if (JSON.stringify(newTempSizes) !== JSON.stringify(tempIndexSizes)) {
+      setTempIndexSizes(newTempSizes);
+    }
   }, [indexSizes]);
 
   // Only sync bulk input with indexSizes when not editing

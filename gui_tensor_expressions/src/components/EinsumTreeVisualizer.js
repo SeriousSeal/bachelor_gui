@@ -6,6 +6,7 @@ import HistoryPanel from './visual/HistoryPanel';
 import IndexSizeInput from './visual/IndexSizeInput';
 import CollapsiblePanel from './visual/CollapsiblePanel';
 import CustomPanelResizeHandle from './visual/CustomPanelResizeHandle';
+import { Toast } from './visual/toast.js';
 import buildVisualizationTree from './layout';
 import { LayoutOptionType } from './constants';
 import { calculateTotalOperations } from './dimsAndOps';
@@ -51,7 +52,6 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
   };
 
   const handleTreeUpdate = useCallback((indexSizes) => {
-    
     const findNodeInTree = (treeNode, id) => {
       if (!treeNode) return null;
       if (treeNode.id === id) return treeNode;
@@ -63,11 +63,9 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
     setIndexSizes(indexSizes);
     tree.updateIndexSizes(indexSizes);
 
-    // Calculate new total operations and update tree nodes
     const { totalOperations, faultyNodes } = calculateTotalOperations(indexSizes, tree.getRoot());
     setTotalOperations(totalOperations);
 
-    // Update nodes with new operation values and mark faulty nodes
     const updatedNodes = nodes1.map(node => {
       const isFaulty = faultyNodes.some(faultyNode => faultyNode.id === node.id);
       if (node.data && node.data.left && node.data.right) {
@@ -97,21 +95,25 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
 
     setNodes1(updatedNodes);
 
-    // Update history
+    // Update history by modifying the existing entry
     setHistory(prevHistory => {
-      if (prevHistory.length === 0) return prevHistory;
-
-      return [
-        {
-          ...prevHistory[0],
+      const currentExpression = tree.treeToString();
+      const existingIndex = prevHistory.findIndex(item => item.expression === currentExpression);
+      
+      if (existingIndex !== -1) {
+        // Update existing entry
+        const updatedHistory = [...prevHistory];
+        updatedHistory[existingIndex] = {
+          ...updatedHistory[existingIndex],
           indexSizes: indexSizes,
-          tree: tree,
           nodes: updatedNodes,
-        },
-        ...prevHistory.slice(1)
-      ];
+          edges: edges1
+        };
+        return updatedHistory;
+      }
+      return prevHistory;
     });
-  }, [nodes1, selectedNode, tree, setNodes1]);
+  }, [nodes1, selectedNode, tree, setNodes1, edges1]);
 
   const parseInput = useCallback((einsumExpression) => {
 
@@ -347,6 +349,10 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
 
   // Add share button functionality
   const handleShare = useCallback(() => {
+    if(!einsumExpression || !indexSizes) {
+      Toast.show("No einsum expression or index sizes to share");
+    }
+      
     const url = createShareableUrl(einsumExpression, indexSizes);
 
     // Copy to clipboard

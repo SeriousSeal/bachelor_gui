@@ -1,9 +1,11 @@
-import { compressToEncodedURIComponent, decompressFromEncodedURIComponent } from 'lz-string';
+import pako from 'pako';
 
 export const compressData = (data) => {
     if (!data) return null;
     try {
-        return compressToEncodedURIComponent(JSON.stringify(data));
+        const jsonString = JSON.stringify(data);
+        const compressed = pako.gzip(jsonString);
+        return btoa(String.fromCharCode.apply(null, compressed));
     } catch (e) {
         console.error('Failed to compress data:', e);
         return null;
@@ -13,10 +15,12 @@ export const compressData = (data) => {
 export const decompressData = (compressed) => {
     if (!compressed) return null;
     try {
-        const decompressed = decompressFromEncodedURIComponent(compressed);
-        if (!decompressed) {
-            throw new Error('Decompression resulted in null or empty string');
+        const binary = atob(compressed);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+            bytes[i] = binary.charCodeAt(i);
         }
+        const decompressed = pako.ungzip(bytes, { to: 'string' });
         return JSON.parse(decompressed);
     } catch (e) {
         console.error('Failed to decompress data:', e);
