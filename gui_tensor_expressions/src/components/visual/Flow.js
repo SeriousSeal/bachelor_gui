@@ -15,7 +15,9 @@ import ReactFlow, {
 import 'reactflow/dist/style.css';
 import { ResponsiveProvider } from '../utils/ResponsiveContext';
 import { scaleSequential } from 'd3-scale';
-import { interpolateViridis } from 'd3-scale-chromatic';
+import { interpolateCool } from 'd3-scale-chromatic';
+import { scaleLinear } from 'd3-scale';
+import { interpolateBlues } from 'd3-scale-chromatic';
 
 const NODE_TYPES = {
   custom: React.memo(({ data }) => {
@@ -89,8 +91,9 @@ const NODE_TYPES = {
 };
 
 const getColorForPercentage = (percentage) => {
-  const colorScale = scaleSequential(interpolateViridis)
-    .domain([0, 100]);
+  const colorScale = scaleLinear()
+    .domain([0, 100])
+    .range(['#add8e6', '#00008b']); // Light blue to dark blue
   return colorScale(percentage);
 };
 

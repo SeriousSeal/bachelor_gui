@@ -21,6 +21,7 @@ export const decompressData = (compressed) => {
             bytes[i] = binary.charCodeAt(i);
         }
         const decompressed = pako.ungzip(bytes, { to: 'string' });
+        console.log(decompressed);
         return JSON.parse(decompressed);
     } catch (e) {
         console.error('Failed to decompress data:', e);
