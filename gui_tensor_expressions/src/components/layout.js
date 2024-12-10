@@ -1,4 +1,4 @@
-import { hierarchy, tree, cluster } from 'd3-hierarchy';
+import { hierarchy, tree } from 'd3-hierarchy';
 
 const buildVisualizationTree = (root, faultyNodes = [], layoutOption = 'tree') => {
   // First, count the total number of nodes to determine sizing
@@ -21,10 +21,23 @@ const buildVisualizationTree = (root, faultyNodes = [], layoutOption = 'tree') =
   // Select layout based on option
   let layout;
   switch (layoutOption) {
-    case 'cluster':
-      layout = cluster()
-        .size([width, height])
-        .separation((a, b) => (a.parent === b.parent ? 1.5 : 2));
+    case 'spread': 
+      layout = tree()
+        .size([width * 3, height]) 
+        .separation((a, b) => {
+          if (a.parent === b.parent) return 4;
+          return 6 + Math.abs(a.depth - b.depth); 
+        });
+      break;
+    case 'hierarchical':
+      layout = tree()
+        .size([width * 2, height * 1.5])
+        .nodeSize([50, 100])
+        .separation((a, b) => {
+          const depthDiff = Math.abs(a.depth - b.depth);
+          if (a.parent === b.parent) return 2.5;
+          return 2.5 + (depthDiff * 0.5);
+        });
       break;
     case 'compact':
       layout = tree()

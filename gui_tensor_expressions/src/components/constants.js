@@ -1,6 +1,7 @@
 export const LayoutOptionType = {
   Tree: 'tree',
-  Cluster: 'cluster',
+  Hierarchical: 'hierarchical',
   Compact: 'compact',
-  Wide: 'wide'
+  Wide: 'wide',
+  Spread: 'spread'  // Renamed from 'levelBased' to 'spread'
 };

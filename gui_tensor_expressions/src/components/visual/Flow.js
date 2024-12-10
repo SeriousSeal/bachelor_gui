@@ -373,7 +373,7 @@ const Flow = ({
                     handleOptionClickFlow(option);
                   }}
                 >
-                  {`Option ${option.slice(-1)} `}
+                  {`Option ${option} `}
                 </div>
               ))}
             </div>,
