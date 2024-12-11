@@ -1,18 +1,14 @@
-import React, { useMemo, useState, useRef, useCallback } from 'react';
+import React, { useMemo, useCallback } from 'react';
 import ReactFlow, {
   Background,
   Handle,
   Position,
   ReactFlowProvider
 } from 'reactflow';
-import { createPortal } from 'react-dom';
 import { useResponsive } from '../utils/ResponsiveContext';
 
 const MiniReactFlowTree = ({ node, left, right, dimTypes }) => {
   const { miniFlow } = useResponsive();
-  const [tooltip, setTooltip] = useState(null);
-  const nodeRefs = useRef({});
-  const timeoutRef = useRef(null);
 
   const determineDimensionType = useCallback((letter) => {
     if (!dimTypes) return 'O';
@@ -87,10 +83,7 @@ const MiniReactFlowTree = ({ node, left, right, dimTypes }) => {
   }, [miniFlow, node, left, right, determineDimensionType, getLetterColor]);
 
   const CustomNode = ({ data, id }) => (
-    <div
-      className="relative w-full h-full"
-      ref={el => nodeRefs.current[id] = el}
-    >
+    <div className="relative w-full h-full">
       <div className="w-full h-full">
         <div
           className="w-full h-full flex items-center justify-center p-1 overflow-hidden"
@@ -103,11 +96,11 @@ const MiniReactFlowTree = ({ node, left, right, dimTypes }) => {
   );
 
   const createNodeData = useCallback((type, position) => {
-    const { html, fullText, fullColoredHtml, shouldTruncate } = createColoredLabel(type);
+    const { html } = createColoredLabel(type);
     return {
       id: type,
       position,
-      data: { html, fullText, fullColoredHtml, shouldTruncate },
+      data: { html },
       style: {
         width: miniFlow.nodeWidth,
         height: miniFlow.nodeHeight,
@@ -164,42 +157,6 @@ const MiniReactFlowTree = ({ node, left, right, dimTypes }) => {
     default: CustomNode,
   }), []);
 
-  const clearTooltipTimeout = useCallback(() => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
-  }, []);
-
-  const handleNodeMouseEnter = (event, node) => {
-    if (node.data.shouldTruncate) {
-      clearTooltipTimeout();
-      const element = nodeRefs.current[node.id];
-      if (!element) return;
-
-      const rect = element.getBoundingClientRect();
-      const tooltipY = rect.top - 55;
-      const tooltipX = rect.left + (rect.width / 2);
-
-      setTooltip({
-        content: node.data.fullColoredHtml,
-        x: tooltipX,
-        y: tooltipY
-      });
-    }
-  };
-
-  const handleNodeMouseLeave = () => {
-    clearTooltipTimeout();
-    timeoutRef.current = setTimeout(() => {
-      setTooltip(null);
-    }, 100);
-  };
-
-  React.useEffect(() => {
-    return () => clearTooltipTimeout();
-  }, [clearTooltipTimeout]);
-
   return (
     <ReactFlowProvider>
       <div style={{
@@ -228,22 +185,9 @@ const MiniReactFlowTree = ({ node, left, right, dimTypes }) => {
           minZoom={1}
           maxZoom={1}
           nodeTypes={nodeTypes}
-          onNodeMouseEnter={handleNodeMouseEnter}
-          onNodeMouseLeave={handleNodeMouseLeave}
         >
           <Background variant="dots" gap={8} size={1} />
         </ReactFlow>
-        {tooltip && createPortal(
-          <div
-            className="fixed transform -translate-x-1/2 z-[9999] bg-gray-100  px-2 py-1 rounded shadow-lg border border-gray-200 whitespace-nowrap pointer-events-none select-none"
-            style={{
-              left: `${tooltip.x}px`,
-              top: `${tooltip.y}px`,
-            }}
-            dangerouslySetInnerHTML={{ __html: tooltip.content }}
-          />,
-          document.body
-        )}
       </div>
     </ReactFlowProvider>
   );
