@@ -228,4 +228,59 @@ export class Tree {
     newTree.indexSizes = { ...this.indexSizes };
     return newTree;
   }
+
+  updateIndices(updatedNodes) {
+    if (!updatedNodes) {
+      console.warn('updateIndices called with null/undefined updatedNodes');
+      return false;
+    }
+
+    let wasUpdated = false;
+
+    const findAndUpdateNode = (id, newValue) => {
+      if (!id || !newValue) {
+        console.warn('Invalid id or newValue:', { id, newValue });
+        return;
+      }
+      const node = this.findNode(id);
+      console.log('Found node for update:', node);
+      if (node) {
+        console.log(`Updating node ${id} from`, node.value, 'to', newValue);
+        node.value = newValue;
+        node.string = Array.isArray(newValue) ? newValue.join('') : newValue;
+        wasUpdated = true;
+      } else {
+        console.warn(`Node with id ${id} not found`);
+      }
+    };
+
+    if (updatedNodes.id && updatedNodes.value) {
+      findAndUpdateNode(updatedNodes.id, updatedNodes.value);
+    }
+    if (updatedNodes.left?.id && updatedNodes.left?.value) {
+      findAndUpdateNode(updatedNodes.left.id, updatedNodes.left.value);
+    }
+    if (updatedNodes.right?.id && updatedNodes.right?.value) {
+      findAndUpdateNode(updatedNodes.right.id, updatedNodes.right.value);
+    }
+
+    if (wasUpdated) {
+      // Instead of spreading, create a new Node instance with the same data
+      const newRoot = reconstructNode(this.root);
+      this.root = newRoot;
+      return true;
+    }
+    return false;
+  }
+
+  findNode(id) {
+    const search = (node) => {
+      if (!node) return null;
+      if (node.id === id) return node;
+      const left = search(node.left);
+      if (left) return left;
+      return search(node.right);
+    };
+    return search(this.root);
+  }
 }

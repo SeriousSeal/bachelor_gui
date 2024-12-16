@@ -6,7 +6,18 @@ import { TbArrowsExchange } from "react-icons/tb";
 
 import { isEqual } from "lodash";
 
-const InfoPanel = ({ node, connectedNodes, onClose, initialPosition, indexSizes, showSizes, onToggleSizes, swapChildren }) => {
+const InfoPanel = ({
+  node,
+  connectedNodes,
+  setConnectedNodes, // Add this prop
+  onClose,
+  initialPosition,
+  indexSizes,
+  showSizes,
+  onToggleSizes,
+  swapChildren,
+  recalculateTreeAndOperations // Add this prop
+}) => {
   const { panelWidth, padding, miniFlow, showMiniFlow } = useResponsive();
   const [position, setPosition] = useState(initialPosition);
   const [isDragging, setIsDragging] = useState(false);
@@ -79,7 +90,9 @@ const InfoPanel = ({ node, connectedNodes, onClose, initialPosition, indexSizes,
     marginBottom: '8px',
     maxWidth: `${miniFlow.width}px`,
     margin: '0 auto',
-    paddingTop: '8px',
+    paddingTop: '16px', // Increased padding
+    position: 'relative', // Added position relative
+    overflow: 'visible' // Added overflow visible
   };
 
   const tableStyle = {
@@ -165,6 +178,21 @@ const InfoPanel = ({ node, connectedNodes, onClose, initialPosition, indexSizes,
     await swapChildren(node);
   }, [swapChildren, node]);
 
+  const handleIndicesChange = useCallback((nodeId, newIndices) => {
+    if (!setConnectedNodes) return;
+
+    const updatedConnectedNodes = {
+      ...connectedNodes,
+      id: node.id, // Add the root node's id
+      ...(nodeId === 'root' && { value: newIndices }),
+      ...(nodeId === 'left' && { left: { ...connectedNodes.left, value: newIndices } }),
+      ...(nodeId === 'right' && { right: { ...connectedNodes.right, value: newIndices } })
+    };
+
+    setConnectedNodes(updatedConnectedNodes);
+    recalculateTreeAndOperations(updatedConnectedNodes);
+  }, [connectedNodes, setConnectedNodes, recalculateTreeAndOperations, node.id]);
+
   return (
     <div
       ref={panelRef}
@@ -190,6 +218,8 @@ const InfoPanel = ({ node, connectedNodes, onClose, initialPosition, indexSizes,
                 left={connectedNodes.left?.value}
                 right={connectedNodes.right?.value}
                 dimTypes={dimTypes}
+                onIndicesChange={handleIndicesChange}
+                isDragging={isDragging}  // Add this prop
               />
             </div>
             {node.data.left && node.data.right && (
@@ -311,5 +341,6 @@ export default React.memo(InfoPanel, (prevProps, nextProps) =>
   prevProps.showSizes === nextProps.showSizes &&
   prevProps.onToggleSizes === nextProps.onToggleSizes &&
   isEqual(prevProps.node, nextProps.node) &&
-  prevProps.swapChildren === nextProps.swapChildren
+  prevProps.swapChildren === nextProps.swapChildren &&
+  prevProps.setConnectedNodes === nextProps.setConnectedNodes
 );

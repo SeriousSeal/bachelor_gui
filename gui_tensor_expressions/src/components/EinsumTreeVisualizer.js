@@ -43,7 +43,6 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
   };
 
   const onNodeClick = (_, node) => {
-    console.log(node)
     setSelectedNode(node);
     if (node.data && node.data.left && node.data.right) {
       setSelectedNodeOperations(node.data.operations);
@@ -52,14 +51,17 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
     }
   };
 
-  const handleTreeUpdate = useCallback((indexSizes) => {
-    const findNodeInTree = (treeNode, id) => {
-      if (!treeNode) return null;
-      if (treeNode.id === id) return treeNode;
-      const leftResult = findNodeInTree(treeNode.left, id);
-      if (leftResult) return leftResult;
-      return findNodeInTree(treeNode.right, id);
-    };
+  const findNodeInTree = useCallback((treeNode, id) => {
+    if (!treeNode) return null;
+    if (treeNode.id === id) return treeNode;
+    const leftResult = findNodeInTree(treeNode.left, id);
+    if (leftResult) return leftResult;
+    return findNodeInTree(treeNode.right, id);
+  }, []); // No dependencies needed as this is a pure function
+
+  // Renamed from handleTreeUpdate to recalculateOperations
+  const recalculateOperations = useCallback((indexSizes) => {
+
 
     setIndexSizes(indexSizes);
     tree.updateIndexSizes(indexSizes);
@@ -90,6 +92,7 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
     if (selectedNode) {
       const updatedSelectedNode = findNodeInTree(tree.getRoot(), selectedNode.id);
       if (updatedSelectedNode) {
+        selectedNode.data.label = updatedSelectedNode.value;
         setSelectedNodeOperations(updatedSelectedNode.operations);
       }
     }
@@ -100,7 +103,7 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
     setHistory(prevHistory => {
       const currentExpression = tree.treeToString();
       const existingIndex = prevHistory.findIndex(item => item.expression === currentExpression);
-      
+
       if (existingIndex !== -1) {
         // Update existing entry
         const updatedHistory = [...prevHistory];
@@ -114,7 +117,7 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
       }
       return prevHistory;
     });
-  }, [nodes1, selectedNode, tree, setNodes1, edges1]);
+  }, [nodes1, selectedNode, tree, setNodes1, edges1, findNodeInTree]);
 
   const parseInput = useCallback((einsumExpression) => {
 
@@ -289,7 +292,7 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
       setEinsumExpression(treeString);
 
       // Calculate new operations
-      const {totalOps, faultyNodes} = calculateTotalOperations(indexSizes, newTree.getRoot());
+      const { totalOps, faultyNodes } = calculateTotalOperations(indexSizes, newTree.getRoot());
       setTotalOperations(totalOps);
 
       // Rebuild visualization with new tree structure
@@ -336,16 +339,16 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
   useEffect(() => {
     if (initialSizes && tree) {  // Only update sizes if we have both sizes and tree
       setIndexSizes(initialSizes);
-      handleTreeUpdate(initialSizes);
+      recalculateOperations(initialSizes);
     }
-  }, [initialSizes, tree, handleTreeUpdate]); // Add handleTreeUpdate as a dependency
+  }, [initialSizes, tree, recalculateOperations]); // Add recalculateOperations as a dependency
 
   // Add share button functionality
   const handleShare = useCallback(() => {
-    if(!einsumExpression || !indexSizes) {
+    if (!einsumExpression || !indexSizes) {
       Toast.show("No einsum expression or index sizes to share");
     }
-      
+
     const url = createShareableUrl(einsumExpression, indexSizes);
 
     // Copy to clipboard
@@ -353,6 +356,65 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
       .then(() => alert('Share URL copied to clipboard!'))
       .catch(err => console.error('Failed to copy URL:', err));
   }, [einsumExpression, indexSizes]);
+
+  // New function to handle tree updates after index changes
+  const recalculateTreeAndOperations = useCallback((updatedConnectedNodes) => {
+    if (!tree) return;
+
+    try {
+      // Clone the tree and update indices
+      const newTree = tree.clone();
+      const wasUpdated = newTree.updateIndices(updatedConnectedNodes);
+
+      if (!wasUpdated) {
+        console.warn('Tree update failed');
+        return;
+      }
+
+      // Important: Get the updated root after updateIndices
+      const updatedRoot = newTree.getRoot();
+
+      // Get updated tree representation using the new root
+      const treeString = newTree.treeToString();
+      setEinsumExpression(treeString);
+
+      // Recalculate operations with the new root
+      const { totalOperations: newTotalOps, faultyNodes } = calculateTotalOperations(indexSizes, updatedRoot);
+      setTotalOperations(newTotalOps);
+
+      // Build visualization with the new root
+      const { nodes, edges } = buildVisualizationTree(updatedRoot, faultyNodes, layoutOption);
+      setNodes1(nodes);
+      setEdges1(edges);
+
+      // Update the tree state with the new tree
+      setTree(newTree);
+
+      // Update selected node if needed
+      if (selectedNode) {
+        const updatedSelectedNode = newTree.findNode(selectedNode.id);
+        if (updatedSelectedNode) {
+          selectedNode.data.label = updatedSelectedNode.value;
+          setSelectedNode(selectedNode);
+        }
+      }
+
+      // Update history with the new tree
+      setHistory(prevHistory => {
+        const newItem = {
+          expression: treeString,
+          nodes,
+          edges,
+          indexSizes,
+          tree: newTree
+        };
+        return [newItem, ...prevHistory.slice(0, 4)];
+      });
+    } catch (error) {
+      console.error('Error updating tree:', error);
+      Toast.show('Error updating indices');
+    }
+  }, [tree, indexSizes, layoutOption, setNodes1, setEdges1, selectedNode]);
 
   return (
     <div className="h-screen bg-gray-50">
@@ -375,6 +437,7 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
                     fitViewFunction={(fn) => (fitViewFunctions.current.tree1 = fn)}
                     handleOptionClick={handleOptionClick}
                     swapChildren={swapChildren}
+                    recalculateTreeAndOperations={recalculateTreeAndOperations}
                   />
                 </ReactFlowProvider>
               </Panel>
@@ -461,7 +524,7 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
               </button>
             </div>
             <HistoryPanel history={history} onSelectTree={selectTreeFromHistory} />
-            <IndexSizeInput indexSizes={indexSizes} setIndexSizes={setIndexSizes} onUpdate={handleTreeUpdate} />
+            <IndexSizeInput indexSizes={indexSizes} setIndexSizes={setIndexSizes} onUpdate={recalculateOperations} />
           </div>
         </Panel>
       </PanelGroup>

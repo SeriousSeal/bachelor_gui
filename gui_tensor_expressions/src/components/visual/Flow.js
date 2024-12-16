@@ -96,17 +96,17 @@ const getColorForPercentage = (percentage) => {
 
 
 const Flow = ({
-  nodes = [], // Provide default empty array
-  edges = [], // Provide default empty array
-  onNodesChange = () => { }, // Default no-op function
-  onEdgesChange = () => { }, // Default no-op function
-  onConnect = () => { }, // Default no-op function
+  nodes = [],
+  edges = [],
+  onNodesChange = () => { },
+  onEdgesChange = () => { },
+  onConnect = () => { },
   onNodeClick: propOnNodeClick,
-  tree = { getRoot: () => null }, // Default empty tree
+  tree = { getRoot: () => null },
   indexSizes = {},
-  fitViewFunction,
-  handleOptionClick = () => { }, // Default no-op function
-  swapChildren = () => { } // Default no-op function
+  handleOptionClick = () => { },
+  swapChildren = () => { },
+  recalculateTreeAndOperations
 }) => {
   const [hoveredNode, setHoveredNode] = useState(null);
   const [selectedNode, setSelectedNode] = useState(null);
@@ -342,6 +342,7 @@ const Flow = ({
                 key={`${connectedNodes.value}-${connectedNodes.left?.value}-${connectedNodes.right?.value}`}
                 node={activeNode ?? hoveredNode}
                 connectedNodes={connectedNodes}
+                setConnectedNodes={setConnectedNodes}
                 onClose={() => {
                   setSelectedNode(null);
                   setHoveredNode(null);
@@ -352,6 +353,7 @@ const Flow = ({
                 showSizes={showSizes}
                 onToggleSizes={handleToggleSizes}
                 swapChildren={handleSwapChildren}
+                recalculateTreeAndOperations={recalculateTreeAndOperations}
               />
             </div>
           )}

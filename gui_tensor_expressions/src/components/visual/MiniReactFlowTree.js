@@ -1,13 +1,101 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import ReactFlow, {
-  Background,
   Handle,
   Position,
   ReactFlowProvider
 } from 'reactflow';
 import { useResponsive } from '../utils/ResponsiveContext';
+import NodeIndicesPanel from './NodeIndicesPanel';
 
-const MiniReactFlowTree = ({ node, left, right, dimTypes }) => {
+const CustomNode = ({ data, id }) => {  // Change to destructure from data instead of props
+  const [showTooltip, setShowTooltip] = useState(false);
+  const nodeRef = useRef(null);
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+  const timeoutRef = useRef(null);
+
+  const clearTimeoutSafely = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+  };
+
+  useEffect(() => {
+    return () => clearTimeoutSafely();
+  }, []);
+
+  useEffect(() => {
+    if (showTooltip && nodeRef.current && !data.forceCloseTooltip) {  // Change to access from data
+      console.log(data.forceCloseTooltip)
+      const rect = nodeRef.current.getBoundingClientRect();
+      setTooltipPosition({
+        x: rect.left + rect.width / 2,
+        y: rect.top
+      });
+    }
+  }, [showTooltip]);
+
+  useEffect(() => {
+    console.log('Force close tooltip:', data.forceCloseTooltip);  // Change to access from data
+    if (data.forceCloseTooltip) {  // Change to access from data
+      clearTimeoutSafely();
+      setShowTooltip(false);
+    }
+  }, [data.forceCloseTooltip]);  // Change dependency
+
+  const handleSwapIndices = (newIndices) => {
+    console.log('Swapping indices:', { id, newIndices });
+    if (data.indices) {
+      data.onIndicesChange?.(id, newIndices);
+    }
+  };
+
+  const handleMouseEnter = () => {
+    if (data.forceCloseTooltip) return; // Don't show tooltip if panel is being dragged
+    clearTimeoutSafely();
+    setShowTooltip(true);
+  };
+
+  const handleMouseLeave = () => {
+    clearTimeoutSafely();
+    timeoutRef.current = setTimeout(() => {
+      setShowTooltip(false);
+    }, 100);
+  };
+
+  return (
+    <div
+      ref={nodeRef}
+      className="relative w-full h-full bg-white rounded-md border border-gray-200"
+      style={{ pointerEvents: 'all' }}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
+      <div className="w-full h-full flex items-center justify-center p-1">
+        <div dangerouslySetInnerHTML={{ __html: data.html }} />
+      </div>
+      {showTooltip && data.indices && data.indices.length > 0 && createPortal(
+        <NodeIndicesPanel
+          indices={data.indices}
+          onSwapIndices={handleSwapIndices}
+          position={tooltipPosition}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+        />,
+        document.body
+      )}
+      <Handle type="target" position={Position.Top} style={{ visibility: 'hidden' }} />
+      <Handle type="source" position={Position.Bottom} style={{ visibility: 'hidden' }} />
+    </div>
+  );
+};
+
+const nodeTypes = {
+  default: CustomNode,
+};
+
+const MiniReactFlowTree = ({ node, left, right, dimTypes, onIndicesChange, isDragging }) => {
   const { miniFlow } = useResponsive();
 
   const determineDimensionType = useCallback((letter) => {
@@ -82,39 +170,36 @@ const MiniReactFlowTree = ({ node, left, right, dimTypes }) => {
     };
   }, [miniFlow, node, left, right, determineDimensionType, getLetterColor]);
 
-  const CustomNode = ({ data, id }) => (
-    <div className="relative w-full h-full">
-      <div className="w-full h-full">
-        <div
-          className="w-full h-full flex items-center justify-center p-1 overflow-hidden"
-          dangerouslySetInnerHTML={{ __html: data.html }}
-        />
-        <Handle type="target" position={Position.Top} style={{ visibility: 'hidden' }} />
-        <Handle type="source" position={Position.Bottom} style={{ visibility: 'hidden' }} />
-      </div>
-    </div>
-  );
-
   const createNodeData = useCallback((type, position) => {
     const { html } = createColoredLabel(type);
+    let indices = [];
+    if (type === 'root') {
+      indices = Array.isArray(node) ? node : [];
+    } else if (type === 'left') {
+      indices = Array.isArray(left) ? left : [];
+    } else if (type === 'right') {
+      indices = Array.isArray(right) ? right : [];
+    }
+
     return {
       id: type,
       position,
-      data: { html },
+      data: {
+        html,
+        indices,
+        onIndicesChange,
+        forceCloseTooltip: isDragging, // Make sure this is included
+      },
       style: {
         width: miniFlow.nodeWidth,
         height: miniFlow.nodeHeight,
         fontSize: `${miniFlow.fontSize}px`,
-        border: '1px solid #ccc',
-        borderRadius: '4px',
-        backgroundColor: 'white',
         padding: 0,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center'
+        backgroundColor: 'transparent',
+        border: 'none'
       }
     };
-  }, [miniFlow, createColoredLabel]);
+  }, [miniFlow, createColoredLabel, node, left, right, onIndicesChange, isDragging]);
 
   const nodes = useMemo(() => {
     const centerX = miniFlow.width / 2;
@@ -153,41 +238,52 @@ const MiniReactFlowTree = ({ node, left, right, dimTypes }) => {
     },
   ], []);
 
-  const nodeTypes = useMemo(() => ({
-    default: CustomNode,
-  }), []);
-
   return (
     <ReactFlowProvider>
       <div style={{
         width: `${miniFlow.width}px`,
         height: `${miniFlow.height}px`,
         position: 'relative',
-        overflow: 'hidden'
+        overflow: 'visible',
       }}>
-        <ReactFlow
-          nodes={nodes}
-          edges={edges}
-          fitView
-          fitViewOptions={{
-            padding: 0.1,
-            minZoom: 1,
-            maxZoom: 1
-          }}
-          proOptions={{ hideAttribution: true }}
-          zoomOnScroll={false}
-          panOnScroll={false}
-          nodesDraggable={false}
-          nodesConnectable={false}
-          elementsSelectable={false}
-          draggable={false}
-          panOnDrag={false}
-          minZoom={1}
-          maxZoom={1}
-          nodeTypes={nodeTypes}
-        >
-          <Background variant="dots" gap={8} size={1} />
-        </ReactFlow>
+        {/* Add background wrapper div */}
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'white',
+          zIndex: 0,
+        }} />
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 1,
+        }}>
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            fitView
+            fitViewOptions={{ padding: 0.1 }}
+            proOptions={{ hideAttribution: true }}
+            nodeTypes={nodeTypes}
+            zoomOnScroll={false}
+            panOnScroll={false}
+            nodesDraggable={false}
+            nodesConnectable={false}
+            elementsSelectable={false}
+            draggable={false}
+            panOnDrag={false}
+            minZoom={1}
+            maxZoom={1}
+          >
+
+          </ReactFlow>
+        </div>
       </div>
     </ReactFlowProvider>
   );

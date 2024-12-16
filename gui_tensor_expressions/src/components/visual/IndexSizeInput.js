@@ -22,21 +22,20 @@ const IndexSizeInput = ({ indexSizes, setIndexSizes, onUpdate }) => {
     return a.charCodeAt(0) - b.charCodeAt(0);
   });
 
+  // Only sync bulk input with indexSizes when not editing
   useEffect(() => {
-    // Only update tempIndexSizes when indexSizes actually changes
+    // Update tempIndexSizes
     const newTempSizes = initializeTempSizes(indexSizes);
     if (JSON.stringify(newTempSizes) !== JSON.stringify(tempIndexSizes)) {
       setTempIndexSizes(newTempSizes);
     }
-  }, [indexSizes]);
 
-  // Only sync bulk input with indexSizes when not editing
-  useEffect(() => {
+    // Update bulk input
     if (!isEditing) {
       const sortedSizes = sortedIndices.map(index => indexSizes[index]);
       setBulkInput(sortedSizes.join(', '));
     }
-  }, [indexSizes, sortedIndices, isEditing]);
+  }, [indexSizes, sortedIndices, isEditing, tempIndexSizes]);
 
   const handleInputChange = (index, value) => {
     const numValue = parseInt(value, 10);
@@ -51,10 +50,10 @@ const IndexSizeInput = ({ indexSizes, setIndexSizes, onUpdate }) => {
     setIsEditing(true);
   };
 
-  const handleUpdateTree = () => {
+  const handleUpdateSizes = () => {
     if (activeTab === "individual") {
       setIndexSizes(tempIndexSizes);
-      onUpdate(tempIndexSizes);
+      onUpdate(tempIndexSizes);  // This now calls recalculateOperations
     } else {
       // Bulk input logic
       if (!bulkInput.trim()) {
@@ -150,10 +149,10 @@ const IndexSizeInput = ({ indexSizes, setIndexSizes, onUpdate }) => {
 
       {sortedIndices.length > 0 && (
         <button
-          onClick={handleUpdateTree}
+          onClick={handleUpdateSizes}
           className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors w-full"
         >
-          Update Tree
+          Update Sizes
         </button>
       )}
     </CollapsiblePanel>
