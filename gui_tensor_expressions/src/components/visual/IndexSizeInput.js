@@ -12,15 +12,46 @@ const IndexSizeInput = ({ indexSizes, setIndexSizes, onUpdate }) => {
     return temp;
   };
 
+  const sortIndices = (indices) => {
+    return indices.sort((a, b) => {
+      // First check if both are numbers
+      const numA = parseInt(a, 10);
+      const numB = parseInt(b, 10);
+      if (!isNaN(numA) && !isNaN(numB)) {
+        return numA - numB;
+      }
+
+      // If either is a number, put numbers first
+      if (!isNaN(numA)) return -1;
+      if (!isNaN(numB)) return 1;
+
+      // Group uppercase and lowercase
+      const isUpperA = /[A-Z]/.test(a);
+      const isUpperB = /[A-Z]/.test(b);
+
+      // If they're in different groups (upper vs lower)
+      if (isUpperA !== isUpperB) {
+        return isUpperA ? -1 : 1;
+      }
+
+      // Within the same group, sort alphabetically
+      return a.localeCompare(b);
+    });
+  };
+
   const [bulkInput, setBulkInput] = useState('');
   const [isEditing, setIsEditing] = useState(false);
   const [tempIndexSizes, setTempIndexSizes] = useState(() => initializeTempSizes(indexSizes));
   const [activeTab, setActiveTab] = useState('individual');
+  const [sortedIndices, setSortedIndices] = useState(() =>
+    sortIndices([...Object.keys(indexSizes)])
+  );
 
-  const sortedIndices = Object.keys(indexSizes).sort((a, b) => {
-    // Direct character code comparison
-    return a.charCodeAt(0) - b.charCodeAt(0);
-  });
+  // Update the useEffect to use the new sorting
+  useEffect(() => {
+    const newSortedIndices = sortIndices([...Object.keys(indexSizes)]);
+    setSortedIndices(newSortedIndices);
+  }, [indexSizes]);
 
   // Only sync bulk input with indexSizes when not editing
   useEffect(() => {
