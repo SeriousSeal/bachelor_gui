@@ -55,10 +55,15 @@ const IndexSizeInput = ({ indexSizes, setIndexSizes, onUpdate }) => {
 
   // Only sync bulk input with indexSizes when not editing
   useEffect(() => {
-    // Update tempIndexSizes
-    const newTempSizes = initializeTempSizes(indexSizes);
-    if (JSON.stringify(newTempSizes) !== JSON.stringify(tempIndexSizes)) {
-      setTempIndexSizes(newTempSizes);
+    // Only initialize tempIndexSizes when component mounts or when new indices are added
+    const currentIndices = Object.keys(tempIndexSizes);
+    const newIndices = Object.keys(indexSizes).filter(key => !currentIndices.includes(key));
+
+    if (newIndices.length > 0) {
+      setTempIndexSizes(prev => ({
+        ...prev,
+        ...Object.fromEntries(newIndices.map(key => [key, indexSizes[key] || 0]))
+      }));
     }
 
     // Update bulk input
@@ -66,7 +71,7 @@ const IndexSizeInput = ({ indexSizes, setIndexSizes, onUpdate }) => {
       const sortedSizes = sortedIndices.map(index => indexSizes[index]);
       setBulkInput(sortedSizes.join(', '));
     }
-  }, [indexSizes, sortedIndices, isEditing, tempIndexSizes]);
+  }, [indexSizes, sortedIndices, isEditing]);
 
   const handleInputChange = (index, value) => {
     const numValue = parseInt(value, 10);
@@ -83,6 +88,12 @@ const IndexSizeInput = ({ indexSizes, setIndexSizes, onUpdate }) => {
 
   const handleUpdateSizes = () => {
     if (activeTab === "individual") {
+      const hasNegativeValues = Object.values(tempIndexSizes).some(value => value < 0);
+
+      if (hasNegativeValues) {
+        Toast.show('Index sizes cannot be negative');
+        return;
+      }
       setIndexSizes(tempIndexSizes);
       onUpdate(tempIndexSizes);  // This now calls recalculateOperations
     } else {
