@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import MiniReactFlowTree from './MiniReactFlowTree';
-import { dimensionTypes } from '../dimsAndOps';
-import { useResponsive } from '../utils/ResponsiveContext';
+import { dimensionTypes } from '../utils/dimensionClassifier';
+import { useResponsive } from '../utils/responsiveContext';
 import { TbArrowsExchange } from "react-icons/tb";
 
 import { isEqual } from "lodash";

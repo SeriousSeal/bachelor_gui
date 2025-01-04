@@ -1,4 +1,4 @@
-import { Toast } from './visual/toast.js';
+import { Toast } from '../common/Toast';
 
 let nodeIdCounter = 0;
 

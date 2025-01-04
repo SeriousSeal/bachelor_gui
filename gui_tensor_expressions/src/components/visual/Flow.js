@@ -3,7 +3,7 @@ import InfoPanel from './InfoPanel';
 import { TbLayoutDistributeHorizontal } from "react-icons/tb";
 import { TbEyeCancel, TbEyeCheck } from "react-icons/tb";
 import { createPortal } from 'react-dom';
-import { LayoutOptionType } from '../constants';
+import { LayoutOptionType } from '../utils/constants';
 import { TbPercentage } from "react-icons/tb";
 import ReactFlow, {
   Background,
@@ -13,7 +13,7 @@ import ReactFlow, {
   ControlButton
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { ResponsiveProvider } from '../utils/ResponsiveContext';
+import { ResponsiveProvider } from '../utils/responsiveContext';
 import { scaleLinear } from 'd3-scale';
 
 const NODE_TYPES = {

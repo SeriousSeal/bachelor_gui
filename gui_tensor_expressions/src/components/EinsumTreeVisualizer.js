@@ -1,15 +1,15 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Panel, PanelGroup } from 'react-resizable-panels';
-import { Tree } from './EinsumContractionTree';
+import { Tree } from './utils/einsumContractionTree';
 import Flow from './visual/Flow';
 import HistoryPanel from './visual/HistoryPanel';
 import IndexSizeInput from './visual/IndexSizeInput';
-import CollapsiblePanel from './visual/CollapsiblePanel';
-import CustomPanelResizeHandle from './visual/CustomPanelResizeHandle';
-import { Toast } from './visual/toast.js';
-import buildVisualizationTree from './layout';
-import { LayoutOptionType } from './constants';
-import { calculateTotalOperations } from './dimsAndOps';
+import CollapsiblePanel from './common/CollapsiblePanel';
+import CustomPanelResizeHandle from './common/CustomPanelResizeHandle';
+import { Toast } from './common/Toast';
+import buildVisualizationTree from './utils/layout';
+import { LayoutOptionType } from './utils/constants';
+import { calculateTotalOperations } from './utils/operations';
 import {
   ReactFlowProvider,
   addEdge,
@@ -217,6 +217,8 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
   };
 
   const renderIndices = (indices) => {
+    console.log(indices)
+    console.log(indexSizes)
     if (!Array.isArray(indices)) return null;
 
     const strides = calculateStrides(indices);

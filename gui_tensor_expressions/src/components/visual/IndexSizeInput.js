@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
-import CollapsiblePanel from './CollapsiblePanel';
-import { Toast } from './toast.js';
+import CollapsiblePanel from '../common/CollapsiblePanel';
+import { Toast } from '../common/Toast';
 
 const IndexSizeInput = ({ indexSizes, setIndexSizes, onUpdate }) => {
   const initializeTempSizes = (sizes) => {
@@ -47,31 +47,42 @@ const IndexSizeInput = ({ indexSizes, setIndexSizes, onUpdate }) => {
     sortIndices([...Object.keys(indexSizes)])
   );
 
+  // Add a ref to track initial render
+  const isInitialMount = useRef(true);
+
+  const checkNeedsUpdate = useCallback((current, target) => {
+    const currentIndices = Object.keys(current);
+    const targetIndices = Object.keys(target);
+
+    // Check only for new indices or removed indices
+    return targetIndices.length !== currentIndices.length ||
+      targetIndices.some(key => !currentIndices.includes(key));
+  }, []);
+
   // Update the useEffect to use the new sorting
   useEffect(() => {
     const newSortedIndices = sortIndices([...Object.keys(indexSizes)]);
     setSortedIndices(newSortedIndices);
   }, [indexSizes]);
 
-  // Only sync bulk input with indexSizes when not editing
+  // Modified sync effect
   useEffect(() => {
-    // Only initialize tempIndexSizes when component mounts or when new indices are added
-    const currentIndices = Object.keys(tempIndexSizes);
-    const newIndices = Object.keys(indexSizes).filter(key => !currentIndices.includes(key));
-
-    if (newIndices.length > 0) {
-      setTempIndexSizes(prev => ({
-        ...prev,
-        ...Object.fromEntries(newIndices.map(key => [key, indexSizes[key] || 0]))
-      }));
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
     }
 
-    // Update bulk input
+    // Only update tempIndexSizes if indices have changed
+    if (checkNeedsUpdate(tempIndexSizes, indexSizes)) {
+      setTempIndexSizes(initializeTempSizes(indexSizes));
+    }
+
+    // Update bulk input only when not editing
     if (!isEditing) {
       const sortedSizes = sortedIndices.map(index => indexSizes[index]);
       setBulkInput(sortedSizes.join(', '));
     }
-  }, [indexSizes, sortedIndices, isEditing]);
+  }, [indexSizes, isEditing, sortedIndices, checkNeedsUpdate, tempIndexSizes]);  // Remove tempIndexSizes from dependencies
 
   const handleInputChange = (index, value) => {
     const numValue = parseInt(value, 10);
@@ -119,7 +130,9 @@ const IndexSizeInput = ({ indexSizes, setIndexSizes, onUpdate }) => {
           newSizes[index] = numValue;
         });
 
+        // Update both indexSizes and tempIndexSizes
         setIndexSizes(newSizes);
+        setTempIndexSizes(newSizes);
         onUpdate(newSizes);
         setIsEditing(false);
       } catch (error) {

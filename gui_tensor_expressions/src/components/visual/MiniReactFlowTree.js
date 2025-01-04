@@ -5,7 +5,7 @@ import ReactFlow, {
   Position,
   ReactFlowProvider
 } from 'reactflow';
-import { useResponsive } from '../utils/ResponsiveContext';
+import { useResponsive } from '../utils/responsiveContext';
 import NodeIndicesPanel from './NodeIndicesPanel';
 
 const CustomNode = ({ data, id }) => {  // Change to destructure from data instead of props
@@ -34,7 +34,7 @@ const CustomNode = ({ data, id }) => {  // Change to destructure from data inste
         y: rect.top
       });
     }
-  }, [showTooltip]);
+  }, [showTooltip, data]);
 
   useEffect(() => {
     console.log('Force close tooltip:', data.forceCloseTooltip);  // Change to access from data

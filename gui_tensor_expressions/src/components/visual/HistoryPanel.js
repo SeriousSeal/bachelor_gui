@@ -1,6 +1,6 @@
 import React from 'react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip.jsx";
-import CollapsiblePanel from './CollapsiblePanel';
+import CollapsiblePanel from '../common/CollapsiblePanel';
 
 const HistoryPanel = ({ history, onSelectTree }) => {
   const maxLength = 200;
@@ -17,8 +17,8 @@ const HistoryPanel = ({ history, onSelectTree }) => {
           <TooltipProvider key={index}>
             <Tooltip>
               <TooltipTrigger asChild>
-                <li 
-                  className="cursor-pointer hover:bg-gray-100 p-2 rounded truncate" 
+                <li
+                  className="cursor-pointer hover:bg-gray-100 p-2 rounded truncate"
                   onClick={() => onSelectTree(item)}
                 >
                   {truncateExpression(item.expression, maxLength)}
