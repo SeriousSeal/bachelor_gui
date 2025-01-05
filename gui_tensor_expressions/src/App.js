@@ -12,19 +12,17 @@ function App() {
   const compressedExpression = searchParams.get('e');
   const compressedSizes = searchParams.get('s');
 
-  console.log('Compressed data:', { compressedExpression, compressedSizes });
 
   const initialExpression = decompressData(compressedExpression);
   const initialSizes = decompressData(compressedSizes);
 
-  console.log('Decompressed data:', { initialExpression, initialSizes });
 
   // Clear URL parameters after reading them
   useEffect(() => {
     if (compressedExpression || compressedSizes) {
       // Small delay to ensure data is processed
       setTimeout(() => {
-        navigate('/', { replace: true });
+        navigate('/bachelor_gui', { replace: true });
       }, 100);
     }
   }, [compressedExpression, compressedSizes, navigate]);
