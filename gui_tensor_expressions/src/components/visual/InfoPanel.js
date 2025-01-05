@@ -314,16 +314,30 @@ const InfoPanel = ({
         </div>
       )}
 
-      <button
-        className="absolute top-3.75 right-8 text-gray-500 hover:text-gray-700 text-xl font-bold"
-        onClick={onToggleSizes}
-        title={showSizes ? "Show Indices" : "Show Sizes"}
-      >
-        <TbArrowsExchange
-          className={`transform transition-transform duration-300 ${showSizes ? 'rotate-180' : ''}`}
-          size={18}
-        />
-      </button>
+      <div className="absolute top-3.75 right-8 flex items-center gap-2">
+        <label className="text-xs text-gray-500">
+          {showSizes ? "Sizes" : "Indices"}
+        </label>
+        <label className="relative inline-block w-8 h-4">
+          <input
+            type="checkbox"
+            className="hidden"
+            checked={showSizes}
+            onChange={onToggleSizes}
+          />
+          <span className={`
+            absolute cursor-pointer inset-0 rounded-full
+            transition-colors duration-200 ease-in-out bg-gray-300
+          `}>
+            <span className={`
+              absolute h-3 w-3 rounded-full bg-white
+              transform transition-transform duration-200 ease-in-out
+              top-0.5 left-0.5
+              ${showSizes ? 'translate-x-4' : 'translate-x-0'}
+            `} />
+          </span>
+        </label>
+      </div>
 
       <button
         className="absolute top-2 right-2 text-gray-500 hover:text-gray-700 text-xl font-bold"

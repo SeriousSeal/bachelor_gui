@@ -90,7 +90,8 @@ const NodeIndicesPanel = ({ indices, onSwapIndices, position, onMouseEnter, onMo
               {previewIndices.map((dim, idx) => (
                 <div
                   key={idx}
-                  className="px-2 py-1 rounded bg-gray-50 text-sm"
+                  className={`px-2 py-1 rounded bg-gray-50 text-sm
+                    ${dim === indices[draggedIndex] ? 'outline outline-2 outline-red-500' : ''}`}
                 >
                   {dim}
                 </div>
