@@ -21,12 +21,12 @@ const buildVisualizationTree = (root, faultyNodes = [], layoutOption = 'tree') =
   // Select layout based on option
   let layout;
   switch (layoutOption) {
-    case 'spread': 
+    case 'spread':
       layout = tree()
-        .size([width * 3, height]) 
+        .size([width * 3, height])
         .separation((a, b) => {
           if (a.parent === b.parent) return 4;
-          return 6 + Math.abs(a.depth - b.depth); 
+          return 6 + Math.abs(a.depth - b.depth);
         });
       break;
     case 'hierarchical':
@@ -41,7 +41,7 @@ const buildVisualizationTree = (root, faultyNodes = [], layoutOption = 'tree') =
       break;
     case 'compact':
       layout = tree()
-        .size([width, height/2])
+        .size([width, height / 2])
         .separation((a, b) => (a.parent === b.parent ? 1 : 1.2));
       break;
     case 'wide':
@@ -68,6 +68,7 @@ const buildVisualizationTree = (root, faultyNodes = [], layoutOption = 'tree') =
         label: d.data.value,
         left: d.data.left?.value,
         right: d.data.right?.value,
+        deleteAble: d.data.deleteAble,
         operations: d.data.operations,  // Add operations information
         totalOperations: d.data.totalOperations,  // Add total operations
         operationsPercentage: d.data.operationsPercentage,  // Add operations percentage	
@@ -84,8 +85,8 @@ const buildVisualizationTree = (root, faultyNodes = [], layoutOption = 'tree') =
 
   const edges = treeRoot.links().map((link, i) => ({
     id: `edge-${i}`,
-    source: nodes.find(n => n.data.label === link.source.data.value).id,
-    target: nodes.find(n => n.data.label === link.target.data.value).id,
+    source: link.source.data.id,  // Use ID directly instead of finding by label
+    target: link.target.data.id,  // Use ID directly instead of finding by label
     type: 'smoothstep'
   }));
 

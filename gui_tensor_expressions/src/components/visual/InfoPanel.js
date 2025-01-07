@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import MiniReactFlowTree from './MiniReactFlowTree';
 import { dimensionTypes } from '../utils/dimensionClassifier';
 import { useResponsive } from '../utils/responsiveContext';
-import { TbArrowsExchange } from "react-icons/tb";
+import { TbArrowsExchange, TbArrowsShuffle } from "react-icons/tb";  // Add TbArrowsShuffle import
 
 import { isEqual } from "lodash";
 
@@ -16,7 +16,9 @@ const InfoPanel = ({
   showSizes,
   onToggleSizes,
   swapChildren,
-  recalculateTreeAndOperations // Add this prop
+  recalculateTreeAndOperations, // Add this prop
+  addPermutationNode,  // Add this prop
+  removePermutationNode  // Add this prop
 }) => {
   const { panelWidth, padding, miniFlow, showMiniFlow } = useResponsive();
   const [position, setPosition] = useState(initialPosition);
@@ -32,8 +34,9 @@ const InfoPanel = ({
   }, [connectedNodes, indexSizes]);
 
   const dimTypes = useMemo(() => {
-    return dimensionTypes(connectedNodes.value, connectedNodes.left?.value, connectedNodes.right?.value);
-  }, [connectedNodes.value, connectedNodes.left?.value, connectedNodes.right?.value]);
+    if (connectedNodes.right)
+      return dimensionTypes(connectedNodes.value, connectedNodes.left?.value, connectedNodes.right?.value);
+  }, [connectedNodes.value, connectedNodes.left?.value, connectedNodes.right]);
 
   const isEmptyDimTypes = useMemo(() => {
     if (dimTypes) {
@@ -178,6 +181,20 @@ const InfoPanel = ({
     await swapChildren(node);
   }, [swapChildren, node]);
 
+  const handleAddPermutation = useCallback(async (e) => {
+    console.log(node)
+    e.stopPropagation();
+    await addPermutationNode(node);
+    onClose(); // Add this line to close the panel
+  }, [addPermutationNode, node, onClose]); // Add onClose to dependencies
+
+  const handleRemovePermutation = useCallback(async (e) => {
+    console.log(node)
+    e.stopPropagation();
+    await removePermutationNode(node);
+    onClose(); // Close panel after removing
+  }, [removePermutationNode, node, onClose]);
+
   const handleIndicesChange = useCallback((nodeId, newIndices) => {
     if (!setConnectedNodes) return;
 
@@ -222,16 +239,38 @@ const InfoPanel = ({
                 isDragging={isDragging}  // Add this prop
               />
             </div>
-            {node.data.left && node.data.right && (
-              <button
-                className="flex items-center justify-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-md text-sm text-gray-700 transition-colors duration-200 mx-auto mb-2"
-                onClick={handleSwap}
-                title="Swap Left and Right Children"
-              >
-                <TbArrowsExchange size={16} />
-                Swap Children
-              </button>
-            )}
+            <div className="flex justify-center gap-2 mx-auto mb-2">
+              {node.data.left && node.data.right && (
+                <button
+                  className="flex items-center justify-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-md text-sm text-gray-700 transition-colors duration-200"
+                  onClick={handleSwap}
+                  title="Swap Left and Right Children"
+                >
+                  <TbArrowsExchange size={16} />
+                  Swap Children
+                </button>
+              )}
+              {!node.data.deleteAble && (
+                <button
+                  className="flex items-center justify-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-md text-sm text-gray-700 transition-colors duration-200"
+                  onClick={handleAddPermutation}
+                  title="Add Permutation Node"
+                >
+                  <TbArrowsShuffle size={16} />
+                  Add Permutation
+                </button>
+              )}
+              {node.data.deleteAble && (
+                <button
+                  className="flex items-center justify-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-md text-sm text-gray-700 transition-colors duration-200"
+                  onClick={handleRemovePermutation}
+                  title="Remove Permutation Node"
+                >
+                  <TbArrowsShuffle size={16} />
+                  Remove Permutation
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -356,5 +395,7 @@ export default React.memo(InfoPanel, (prevProps, nextProps) =>
   prevProps.onToggleSizes === nextProps.onToggleSizes &&
   isEqual(prevProps.node, nextProps.node) &&
   prevProps.swapChildren === nextProps.swapChildren &&
+  prevProps.addPermutationNode === nextProps.addPermutationNode &&
+  prevProps.removePermutationNode === nextProps.removePermutationNode && // Add this check
   prevProps.setConnectedNodes === nextProps.setConnectedNodes
 );

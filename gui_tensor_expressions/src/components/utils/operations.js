@@ -35,6 +35,12 @@ export const calculateTotalOperations = (indexSizes, tree) => {
             resetTreeOperations(node.left);
             resetTreeOperations(node.right);
         }
+        else if (node.left && !node.right) {
+            resetTreeOperations(node.left);
+            node.operations = 0;
+            node.operationsPercentage = 0;
+            node.normalizedPercentage = 0;
+        }
     };
 
     const calculateTotal = (node) => {
@@ -54,6 +60,10 @@ export const calculateTotalOperations = (indexSizes, tree) => {
                 return 1;
             }
         }
+        else if (node.left && !node.right) {
+            node.operations = 0;
+            calculateTotal(node.left);
+        }
         return 0;
     };
 
@@ -64,6 +74,11 @@ export const calculateTotalOperations = (indexSizes, tree) => {
             calculateRawPercentages(node.left);
             calculateRawPercentages(node.right);
         }
+        else if (node.left && !node.right) {
+            calculateRawPercentages(node.left);
+            node.totalOperations = totalOperations;
+            node.operationsPercentage = 0;
+        }
     };
 
     const findMinMaxPercentages = (node, percentages = []) => {
@@ -71,6 +86,9 @@ export const calculateTotalOperations = (indexSizes, tree) => {
             percentages.push(node.operationsPercentage);
             findMinMaxPercentages(node.left, percentages);
             findMinMaxPercentages(node.right, percentages);
+        }
+        else if (node.left && !node.right) {
+            findMinMaxPercentages(node.left, percentages);
         }
         return percentages;
     };
@@ -88,6 +106,10 @@ export const calculateTotalOperations = (indexSizes, tree) => {
             );
             addNormalizedPercentages(node.left, minPercentage, maxPercentage);
             addNormalizedPercentages(node.right, minPercentage, maxPercentage);
+        }
+        else if (node.left && !node.right) {
+            node.normalizedPercentage = 0;
+            addNormalizedPercentages(node.left, minPercentage, maxPercentage);
         }
     };
 

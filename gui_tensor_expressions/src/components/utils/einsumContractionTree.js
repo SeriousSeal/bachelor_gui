@@ -1,7 +1,5 @@
 import { Toast } from '../common/Toast';
 
-let nodeIdCounter = 0;
-
 function isLetterOrNumber(char) {
   return /^[a-zA-Z0-9]$/.test(char);
 }
@@ -60,9 +58,10 @@ export function parseTree(str) {
       const left = parse();
       if (str.slice(index, index + 3) === '->[') {
         index += 3;
+        left.deleteAble = true;
         const head = parseArray();
         index++;
-        return new Node(head, left, null);
+        return new Node(head, left, null, true);
       }
       if (str.slice(index, index + 2) !== '+[' && str.slice(index, index + 2) !== ',[') {
         throw new Error(formatError(
@@ -107,13 +106,14 @@ export function parseTree(str) {
 }
 
 class Node {
-  constructor(value, left = null, right = null) {
-    this.id = `node_${nodeIdCounter++}`; // Add unique ID to each node
+  constructor(value, left = null, right = null, deleteAble = false) {
+    this.id = Tree.getNextId();  // Use the static method instead of direct counter access
     this.value = value;
     this.left = left;
     this.right = right;
     this.string = Array.isArray(value) ? value.join('') : value;
     this.sizes = null;
+    this.deleteAble = deleteAble;
   }
 
   isLeaf() {
@@ -125,10 +125,15 @@ class Node {
 function reconstructNode(nodeData) {
   if (!nodeData) return null;
 
-  const node = new Node(nodeData.value);
+  // Create a new Node instance with the main properties
+  const node = new Node(nodeData.value, null, null, nodeData.deleteAble);
+
+  // Copy over the additional properties
   node.id = nodeData.id;
   node.string = nodeData.string;
   node.sizes = nodeData.sizes;
+
+  // Recursively reconstruct child nodes
   node.left = reconstructNode(nodeData.left);
   node.right = reconstructNode(nodeData.right);
 
@@ -136,14 +141,20 @@ function reconstructNode(nodeData) {
 }
 
 export class Tree {
+  static nodeIdCounter = 0;  // Keep the static counter
+
   constructor(str = null) {
-    nodeIdCounter = 0;
+    Tree.nodeIdCounter = 0;  // Reset counter in constructor
     if (str) {
       this.root = parseTree(str);
     } else {
       this.root = null;
     }
     this.indexSizes = {};
+  }
+
+  static getNextId() {
+    return `node_${Tree.nodeIdCounter++}`;
   }
 
   setRoot(root) {
@@ -166,7 +177,7 @@ export class Tree {
     if (!node) return;
 
     if (node.value && Array.isArray(node.value)) {
-      node.sizes = node.value.map(char => this.indexSizes[char] || 10); // Default to 10 if not specified
+      node.sizes = node.value.map(char => this.indexSizes[char] || 2); // Default to 10 if not specified
     }
 
     this.updateNodeSizes(node.left);
@@ -223,9 +234,11 @@ export class Tree {
 
   // Add method to create a deep copy of the tree
   clone() {
+    const maxIdLastTime = Tree.nodeIdCounter;
     const newTree = new Tree();
     newTree.root = reconstructNode(this.root);
     newTree.indexSizes = { ...this.indexSizes };
+    Tree.nodeIdCounter = maxIdLastTime;
     return newTree;
   }
 
@@ -243,9 +256,7 @@ export class Tree {
         return;
       }
       const node = this.findNode(id);
-      console.log('Found node for update:', node);
       if (node) {
-        console.log(`Updating node ${id} from`, node.value, 'to', newValue);
         node.value = newValue;
         node.string = Array.isArray(newValue) ? newValue.join('') : newValue;
         wasUpdated = true;
@@ -282,5 +293,106 @@ export class Tree {
       return search(node.right);
     };
     return search(this.root);
+  }
+
+  addPermutationNode(nodeId) {
+    console.log(Tree.nodeIdCounter)
+    const addNewLeftChild = (node) => {
+      if (!node) return false;
+
+      if (node.id === nodeId) {
+        // Create a proper new Node instance
+        const newLeftChild = new Node(
+          node.value,
+          node.left,
+          node.right,
+          true
+        );
+        // The Node constructor already calls Tree.getNextId()
+        newLeftChild.sizes = node.sizes;
+        console.log(newLeftChild)
+
+
+        // Update the current node
+        node.left = newLeftChild;
+        node.right = null;
+        node.deleteAble = true;
+        console.log(node)
+
+        return true;
+      }
+
+      return addNewLeftChild(node.left) || addNewLeftChild(node.right);
+    };
+
+    return addNewLeftChild(this.root);
+  }
+
+  removePermutationNode(nodeId) {
+    // Special case for root node
+    if (this.root && this.root.id === nodeId) {
+      if (this.root.left && !this.root.right) {
+        this.root = this.root.left;
+        return true;
+      }
+      return false;
+    }
+
+    const removeNode = (node) => {
+      if (!node) return false;
+
+      // Check left child
+      if (node.left?.id === nodeId) {
+        console.log(node)
+        if (node.left.left && !node.left.right) {  // Is it a permutation node?
+          // Create new Node instance for the left child
+          const newNode = new Node(
+            node.left.left.value,
+            node.left.left.left,
+            node.left.left.right,
+            false
+          );
+          newNode.id = node.left.left.id;
+          newNode.sizes = node.left.left.sizes;
+          node.left = newNode;
+        } else {
+          // Create new Node instance for the current node
+          const newNode = new Node(
+            node.left.value,
+            node.left.left,
+            node.left.right,
+            false
+          );
+          newNode.id = node.left.id;
+          newNode.sizes = node.left.sizes;
+          Object.assign(node, newNode);
+        }
+        return true;
+      }
+
+      // Check right child
+      else if (node.right?.id === nodeId) {
+        console.log(node)
+        if (node.right.left && !node.right.right) {  // Is it a permutation node?
+          // Create new Node instance for the right child
+          const newNode = new Node(
+            node.right.left.value,
+            node.right.left.left,
+            node.right.left.right,
+            false
+          );
+          newNode.id = node.right.left.id;
+          newNode.sizes = node.right.left.sizes;
+          node.right = newNode;
+        } else {
+          throw new Error('Cannot remove non-permutation node');
+        }
+        return true;
+      }
+
+      return removeNode(node.left) || removeNode(node.right);
+    };
+
+    return removeNode(this.root);
   }
 }

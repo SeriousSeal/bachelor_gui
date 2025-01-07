@@ -130,8 +130,6 @@ class DimensionClassifier {
         for (let i = this.node.length - 1; i >= 0; i--) {
             const element = this.node[i];
             const occurrenceLast = this.checkOccurrenceLast(element);
-            console.log(element);
-            console.log(occurrenceLast);
 
             let retCode = this.handleInitialState(element, occurrenceLast);
 

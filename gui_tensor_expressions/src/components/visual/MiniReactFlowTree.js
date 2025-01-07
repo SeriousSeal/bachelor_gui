@@ -27,7 +27,6 @@ const CustomNode = ({ data, id }) => {  // Change to destructure from data inste
 
   useEffect(() => {
     if (showTooltip && nodeRef.current && !data.forceCloseTooltip) {  // Change to access from data
-      console.log(data.forceCloseTooltip)
       const rect = nodeRef.current.getBoundingClientRect();
       setTooltipPosition({
         x: rect.left + rect.width / 2,
@@ -37,7 +36,6 @@ const CustomNode = ({ data, id }) => {  // Change to destructure from data inste
   }, [showTooltip, data]);
 
   useEffect(() => {
-    console.log('Force close tooltip:', data.forceCloseTooltip);  // Change to access from data
     if (data.forceCloseTooltip) {  // Change to access from data
       clearTimeoutSafely();
       setShowTooltip(false);
@@ -207,36 +205,50 @@ const MiniReactFlowTree = ({ node, left, right, dimTypes, onIndicesChange, isDra
     const verticalSpacing = miniFlow.height * 0.6;
     const horizontalSpacing = miniFlow.width * 0.3;
 
-    return [
+    const baseNodes = [
       createNodeData('root', {
         x: rootX,
         y: 0
       }),
       createNodeData('left', {
-        x: centerX - horizontalSpacing - (miniFlow.nodeWidth / 2),
+        x: centerX - (right ? horizontalSpacing : 0) - (miniFlow.nodeWidth / 2),
         y: verticalSpacing
-      }),
-      createNodeData('right', {
-        x: centerX + horizontalSpacing - (miniFlow.nodeWidth / 2),
-        y: verticalSpacing
-      }),
+      })
     ];
-  }, [miniFlow, createNodeData]);
 
-  const edges = useMemo(() => [
-    {
-      id: 'root-left',
-      source: 'root',
-      target: 'left',
-      style: { stroke: '#999' }
-    },
-    {
-      id: 'root-right',
-      source: 'root',
-      target: 'right',
-      style: { stroke: '#999' }
-    },
-  ], []);
+    if (right !== undefined) {
+      baseNodes.push(
+        createNodeData('right', {
+          x: centerX + horizontalSpacing - (miniFlow.nodeWidth / 2),
+          y: verticalSpacing
+        })
+      );
+    }
+
+    return baseNodes;
+  }, [miniFlow, createNodeData, right]);
+
+  const edges = useMemo(() => {
+    const baseEdges = [
+      {
+        id: 'root-left',
+        source: 'root',
+        target: 'left',
+        style: { stroke: '#999' }
+      }
+    ];
+
+    if (right !== undefined) {
+      baseEdges.push({
+        id: 'root-right',
+        source: 'root',
+        target: 'right',
+        style: { stroke: '#999' }
+      });
+    }
+
+    return baseEdges;
+  }, [right]);
 
   return (
     <ReactFlowProvider>

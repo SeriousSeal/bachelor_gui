@@ -106,7 +106,9 @@ const Flow = ({
   indexSizes = {},
   handleOptionClick = () => { },
   swapChildren = () => { },
-  recalculateTreeAndOperations
+  recalculateTreeAndOperations,
+  addPermutationNode,
+  removePermutationNode  // Add this prop
 }) => {
   const [hoveredNode, setHoveredNode] = useState(null);
   const [selectedNode, setSelectedNode] = useState(null);
@@ -192,8 +194,8 @@ const Flow = ({
     if (lookUpNode.id === node.id) {
       return {
         value: lookUpNode.value,
-        ...(lookUpNode.right && { left: lookUpNode.left }),
-        ...(lookUpNode.left && { right: lookUpNode.right })
+        ...{ left: lookUpNode.left },
+        ...{ right: lookUpNode.right }
       };
     }
     const leftSearch = findConnectedNodes(lookUpNode.left, node);
@@ -204,7 +206,7 @@ const Flow = ({
 
   const handleNodeMouseEnter = useCallback((event, node) => {
     if (!hoverEnabled || selectedNode) return; // Früher Return wenn Hover deaktiviert ist
-    if (selectedNode && !node.data.right) return; // Früher Return wenn Node keine Kinder hat
+    if (selectedNode && !node.data.left) return; // Früher Return wenn Node keine Kinder hat
     console.log(node)
 
     clearTimeout(timeoutRef.current);
@@ -307,7 +309,7 @@ const Flow = ({
           onNodeClick={handleNodeClick}
           onNodeMouseEnter={handleNodeMouseEnter}
           onNodeMouseLeave={handleNodeMouseLeave}
-          nodesDraggable={false}
+          nodesDraggable={true}
           proOptions={{ hideAttribution: true }}
         >
           <Controls>
@@ -333,7 +335,7 @@ const Flow = ({
             </ControlButton>
           </Controls>
           <Background variant="dots" gap={12} size={1} />
-          {activeNode && connectedNodes.left && (
+          {activeNode && (
             <div
               onMouseEnter={handlePanelMouseEnter}
               onMouseLeave={handlePanelMouseLeave}
@@ -354,6 +356,8 @@ const Flow = ({
                 onToggleSizes={handleToggleSizes}
                 swapChildren={handleSwapChildren}
                 recalculateTreeAndOperations={recalculateTreeAndOperations}
+                addPermutationNode={addPermutationNode}
+                removePermutationNode={removePermutationNode}  // Add this prop
               />
             </div>
           )}
