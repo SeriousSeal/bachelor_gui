@@ -135,7 +135,6 @@ const Flow = ({
     }));
 
     const modifiedEdges = edges.map(edge => {
-      // Default edge style for edges without percentages
       const defaultEdgeStyle = {
         ...edge,
         style: {
@@ -146,13 +145,14 @@ const Flow = ({
 
       const sourceNode = nodes.find(n => n.id === edge.source);
       if (sourceNode?.data?.operationsPercentage) {
+        // Calculate color based on operations percentage
+        const percentage = (sourceNode.data.operations / sourceNode.data.totalOperations) * 100;
         return {
           ...defaultEdgeStyle,
           style: {
-            stroke: getColorForPercentage(sourceNode.data.normalizedPercentage),
+            stroke: getColorForPercentage(percentage),
             strokeWidth: 2
           },
-          // No animationDirection specified - this will make it flow from source to target
           labelStyle: { fill: '#666', fontSize: '10px' },
           labelBgStyle: { fill: 'rgba(255, 255, 255, 0.8)' }
         };
