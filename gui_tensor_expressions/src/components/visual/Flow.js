@@ -38,9 +38,13 @@ const NODE_TYPES = {
       return { displayLabel, nodeWidth, operationPercentage };
     }, [data.label, data.showOperations, data.operationsPercentage]);
 
+    const isHighlighted = data.isHighlighted;
+
     return (
       <div style={{
-        background: '#fff',
+        background: isHighlighted ? '#e3f2fd' : '#fff',
+        borderColor: isHighlighted ? '#2196f3' : '#777',
+        opacity: isHighlighted ? 1 : 0.7,
         border: data.isFaulty ? '2px solid red' : '1px solid #777',
         borderRadius: '8px',
         width: `${displayData.nodeWidth}px`,
@@ -121,6 +125,7 @@ const Flow = ({
   const panelRef = useRef(null);
   const [panelPosition, setPanelPosition] = useState({ x: 0, y: 0 });
   const [showSizes, setShowSizes] = useState(false);
+  const [highlightedNodes, setHighlightedNodes] = useState(new Set());
 
 
   const { augmentedNodes, augmentedEdges } = useMemo(() => {
@@ -131,6 +136,7 @@ const Flow = ({
       data: {
         ...node.data,
         showOperations: showOperations,
+        isHighlighted: highlightedNodes.has(node.id)
       }
     }));
 
@@ -165,7 +171,7 @@ const Flow = ({
       augmentedNodes: modifiedNodes,
       augmentedEdges: modifiedEdges
     };
-  }, [nodes, edges, showOperations]);
+  }, [nodes, edges, showOperations, highlightedNodes]);
 
   const toggleOperations = useCallback(() => {
     if (timeoutRef.current) {
@@ -225,12 +231,58 @@ const Flow = ({
 
   const handleNodeClick = useCallback((event, node) => {
     event.preventDefault();
+
+    const getDescendants = (nodeId) => {
+      const descendants = new Set();
+      const stack = [nodeId];
+
+      while (stack.length > 0) {
+        const current = stack.pop();
+        descendants.add(current);
+        const childEdges = augmentedEdges.filter(e => e.source === current);
+        childEdges.forEach(edge => {
+          stack.push(edge.target);
+        });
+      }
+      return descendants;
+    };
+
+    const getParents = (nodeId) => {
+      const parents = new Set();
+      const parentEdges = augmentedEdges.filter(e => e.target === nodeId);
+      parentEdges.forEach(edge => parents.add(edge.source));
+      return parents;
+    };
+
+    const isChildOfHighlighted = (nodeId) => {
+      const parents = getParents(nodeId);
+      return Array.from(parents).some(parentId => highlightedNodes.has(parentId));
+    };
+
+    // Handle different cases
+    if (highlightedNodes.has(node.id)) {
+      // Case 1: Node is highlighted -> remove node and descendants
+      const descendantsToRemove = getDescendants(node.id);
+      const newHighlightedNodes = new Set(highlightedNodes);
+      descendantsToRemove.forEach(id => newHighlightedNodes.delete(id));
+      setHighlightedNodes(newHighlightedNodes);
+    } else if (isChildOfHighlighted(node.id)) {
+      // Case 2: Node is unhighlighted child of highlighted node -> add node only
+      const newHighlightedNodes = new Set(highlightedNodes);
+      const descendants = getDescendants(node.id);
+      descendants.forEach(id => newHighlightedNodes.add(id));
+      setHighlightedNodes(newHighlightedNodes);
+    } else {
+      // Case 3: Normal selection behavior
+      setHighlightedNodes(getDescendants(node.id));
+    }
+
     setSelectedNode(node);
     setConnectedNodes(findConnectedNodes(tree.getRoot(), node));
     if (propOnNodeClick) {
       propOnNodeClick(event, node);
     }
-  }, [findConnectedNodes, propOnNodeClick, tree]);
+  }, [augmentedEdges, highlightedNodes, findConnectedNodes, propOnNodeClick, tree]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -370,7 +422,7 @@ const Flow = ({
                 top: panelPosition.y
               }}
             >
-              <h3 className="text-base font-medium mb-1">Choose an option:</h3>
+              <h3 className="text-base font-medium mb-1">Choose a layout:</h3>
               {Object.values(LayoutOptionType).map(option => (
                 <div
                   key={option}
@@ -379,7 +431,7 @@ const Flow = ({
                     handleOptionClickFlow(option);
                   }}
                 >
-                  {`Option ${option} `}
+                  {`${option} `}
                 </div>
               ))}
             </div>,
