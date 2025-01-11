@@ -1,3 +1,4 @@
+// --- Imports ---
 import React, { useMemo, useCallback, useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import ReactFlow, {
@@ -8,7 +9,12 @@ import ReactFlow, {
 import { useResponsive } from '../utils/responsiveContext';
 import NodeIndicesPanel from './NodeIndicesPanel';
 
-const CustomNode = ({ data, id }) => {  // Change to destructure from data instead of props
+// --- Component Definitions ---
+/**
+ * Custom node component for the flow diagram
+ * Handles tooltip display and index management for tensor nodes
+ */
+const CustomNode = ({ data, id }) => {
   const [showTooltip, setShowTooltip] = useState(false);
   const nodeRef = useRef(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
@@ -26,7 +32,7 @@ const CustomNode = ({ data, id }) => {  // Change to destructure from data inste
   }, []);
 
   useEffect(() => {
-    if (showTooltip && nodeRef.current && !data.forceCloseTooltip) {  // Change to access from data
+    if (showTooltip && nodeRef.current && !data.forceCloseTooltip) {
       const rect = nodeRef.current.getBoundingClientRect();
       setTooltipPosition({
         x: rect.left + rect.width / 2,
@@ -36,11 +42,11 @@ const CustomNode = ({ data, id }) => {  // Change to destructure from data inste
   }, [showTooltip, data]);
 
   useEffect(() => {
-    if (data.forceCloseTooltip) {  // Change to access from data
+    if (data.forceCloseTooltip) {
       clearTimeoutSafely();
       setShowTooltip(false);
     }
-  }, [data.forceCloseTooltip]);  // Change dependency
+  }, [data.forceCloseTooltip]);
 
   const handleSwapIndices = (newIndices) => {
     console.log('Swapping indices:', { id, newIndices });
@@ -89,13 +95,29 @@ const CustomNode = ({ data, id }) => {  // Change to destructure from data inste
   );
 };
 
+// Node types configuration for ReactFlow
 const nodeTypes = {
   default: CustomNode,
 };
 
+/**
+ * Main component that renders a tree visualization of tensor operations
+ * @param {Object} props Component props
+ * @param {Array} props.node Root node indices
+ * @param {Array} props.left Left child indices
+ * @param {Array} props.right Right child indices
+ * @param {Object} props.dimTypes Dimension types configuration
+ * @param {Function} props.onIndicesChange Callback for index changes
+ * @param {boolean} props.isDragging Indicates if parent is being dragged
+ */
 const MiniReactFlowTree = ({ node, left, right, dimTypes, onIndicesChange, isDragging }) => {
   const { miniFlow } = useResponsive();
 
+  /**
+   * Determines the dimension type of a given letter based on dimTypes configuration
+   * @param {string} letter The letter to check
+   * @returns {string} Dimension type ('C', 'M', 'N', 'K', or 'O')
+   */
   const determineDimensionType = useCallback((letter) => {
     if (!dimTypes) return 'O';
 
@@ -111,6 +133,11 @@ const MiniReactFlowTree = ({ node, left, right, dimTypes, onIndicesChange, isDra
     return 'O';
   }, [dimTypes]);
 
+  /**
+   * Returns the color code for a given dimension type
+   * @param {string} dimensionType The dimension type
+   * @returns {string} Color hex code
+   */
   const getLetterColor = useCallback((dimensionType) => {
     switch (dimensionType) {
       case 'C': return '#a6cee3';
@@ -121,6 +148,11 @@ const MiniReactFlowTree = ({ node, left, right, dimTypes, onIndicesChange, isDra
     }
   }, []);
 
+  /**
+   * Creates a colored HTML label for node display
+   * @param {string} nodeType Type of node ('root', 'left', or 'right')
+   * @returns {Object} Object containing HTML and text representations
+   */
   const createColoredLabel = useCallback((nodeType) => {
     let text;
     if (nodeType === 'root') {
@@ -168,6 +200,12 @@ const MiniReactFlowTree = ({ node, left, right, dimTypes, onIndicesChange, isDra
     };
   }, [miniFlow, node, left, right, determineDimensionType, getLetterColor]);
 
+  /**
+   * Creates node data configuration for ReactFlow
+   * @param {string} type Node type
+   * @param {Object} position Node position coordinates
+   * @returns {Object} Node configuration object
+   */
   const createNodeData = useCallback((type, position) => {
     const { html } = createColoredLabel(type);
     let indices = [];
@@ -199,6 +237,9 @@ const MiniReactFlowTree = ({ node, left, right, dimTypes, onIndicesChange, isDra
     };
   }, [miniFlow, createColoredLabel, node, left, right, onIndicesChange, isDragging]);
 
+  /**
+   * Generates node configurations for the flow diagram
+   */
   const nodes = useMemo(() => {
     const centerX = miniFlow.width / 2;
     const rootX = centerX - (miniFlow.nodeWidth / 2);
@@ -228,6 +269,9 @@ const MiniReactFlowTree = ({ node, left, right, dimTypes, onIndicesChange, isDra
     return baseNodes;
   }, [miniFlow, createNodeData, right]);
 
+  /**
+   * Generates edge configurations for the flow diagram
+   */
   const edges = useMemo(() => {
     const baseEdges = [
       {

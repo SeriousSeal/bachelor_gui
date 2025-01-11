@@ -361,7 +361,7 @@ const Flow = ({
           onNodeClick={handleNodeClick}
           onNodeMouseEnter={handleNodeMouseEnter}
           onNodeMouseLeave={handleNodeMouseLeave}
-          nodesDraggable={true}
+          nodesDraggable={false}
           proOptions={{ hideAttribution: true }}
         >
           <Controls>

@@ -1,21 +1,85 @@
 import React, { useState, useMemo } from 'react';
 
+/**
+ * NodeIndicesPanel Component
+ * Displays a draggable panel of indices that can be reordered through drag and drop.
+ * @param {Array} indices - Array of indices to display
+ * @param {Function} onSwapIndices - Callback function when indices are swapped
+ * @param {Object} position - {x, y} coordinates for panel positioning
+ * @param {Function} onMouseEnter - Mouse enter event handler
+ * @param {Function} onMouseLeave - Mouse leave event handler
+ */
 const NodeIndicesPanel = ({ indices, onSwapIndices, position, onMouseEnter, onMouseLeave }) => {
+  // State Management
   const [draggedIndex, setDraggedIndex] = useState(null);
   const [dropIndex, setDropIndex] = useState(null);
 
+  /**
+   * Resets the drag and drop state
+   */
+  const resetDragState = () => {
+    setDraggedIndex(null);
+    setDropIndex(null);
+  };
+
+  /**
+   * Handles the start of a drag operation
+   * @param {Event} e - Drag start event
+   * @param {number} index - Index being dragged
+   */
   const handleDragStart = (e, index) => {
     e.stopPropagation();
     setDraggedIndex(index);
     e.dataTransfer.effectAllowed = 'move';
   };
 
+  /**
+   * Handles dragging over a droppable target
+   * @param {Event} e - Drag over event
+   * @param {number} index - Index being dragged over
+   */
   const handleDragOver = (e, index) => {
     e.preventDefault();
     if (draggedIndex === null) return;
     setDropIndex(index);
   };
 
+  /**
+   * Handles dragging over the container
+   * @param {Event} e - Drag over event
+   */
+  const handleDragOverContainer = (e) => {
+    e.preventDefault();
+  };
+
+  /**
+   * Handles the drop event to reorder indices
+   * @param {Event} e - Drop event
+   */
+  const handleDrop = (e) => {
+    e.preventDefault();
+    if (draggedIndex === null || dropIndex === null) return;
+
+    const newIndices = [...indices];
+    const [draggedValue] = newIndices.splice(draggedIndex, 1);
+    newIndices.splice(dropIndex, 0, draggedValue);
+
+    if (indices.join(',') !== newIndices.join(',')) {
+      onSwapIndices(newIndices);
+    }
+    resetDragState();
+  };
+
+  /**
+   * Handles the end of a drag operation
+   */
+  const handleDragEnd = () => {
+    resetDragState();
+  };
+
+  /**
+   * Memoized preview of indices during drag operation
+   */
   const previewIndices = useMemo(() => {
     if (draggedIndex === null || dropIndex === null) return indices;
     const newIndices = [...indices];
@@ -24,35 +88,7 @@ const NodeIndicesPanel = ({ indices, onSwapIndices, position, onMouseEnter, onMo
     return newIndices;
   }, [indices, draggedIndex, dropIndex]);
 
-  const handleDragOverContainer = (e) => {
-    e.preventDefault();
-  };
-
-  const handleDrop = (e) => {
-    e.preventDefault();
-    if (draggedIndex === null || dropIndex === null) return;
-
-    // Only prevent the swap if the indices would end up in the same order
-    const newIndices = [...indices];
-    const [draggedValue] = newIndices.splice(draggedIndex, 1);
-    newIndices.splice(dropIndex, 0, draggedValue);
-
-    // Check if the order actually changed
-    if (indices.join(',') !== newIndices.join(',')) {
-      onSwapIndices(newIndices);
-    }
-    resetDragState();
-  };
-
-  const handleDragEnd = () => {
-    resetDragState();
-  };
-
-  const resetDragState = () => {
-    setDraggedIndex(null);
-    setDropIndex(null);
-  };
-
+  // Render Component
   return (
     <div
       className="fixed z-[9999] bg-white shadow-lg rounded-md p-2 border border-gray-200"
