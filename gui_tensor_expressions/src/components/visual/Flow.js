@@ -149,23 +149,30 @@ const NODE_TYPES = {
   })
 };
 
-/* ====================== Main Flow Component ====================== */
+/* ====================== Flow Component Types ====================== */
+
+/**
+ * @typedef {Object} FlowProps
+ * @property {Object[]} nodes - Array of node objects to render
+ * @property {Object[]} edges - Array of edge objects to connect nodes
+ * @property {Function} onNodesChange - Callback for node changes
+ * @property {Function} onEdgesChange - Callback for edge changes
+ * @property {Function} onConnect - Callback when nodes are connected
+ * @property {Function} onNodeClick - External node click handler
+ * @property {Object} tree - Tree data structure with getRoot method
+ * @property {Object} indexSizes - Map of index sizes
+ * @property {Function} handleOptionClick - Layout option change handler
+ * @property {Function} swapChildren - Function to swap node children
+ * @property {Function} recalculateTreeAndOperations - Function to recalculate treeoperations
+ * @property {Function} addPermutationNode - Function to add permutation node
+ * @property {Function} removePermutationNode - Function to remove permutation node
+ */
+
+/* ====================== Flow Component ====================== */
 
 /**
  * Main Flow component for rendering and managing the flow diagram
- * @param {Object[]} nodes - Array of node objects to render
- * @param {Object[]} edges - Array of edge objects to connect nodes
- * @param {Function} onNodesChange - Callback for node changes
- * @param {Function} onEdgesChange - Callback for edge changes
- * @param {Function} onConnect - Callback when nodes are connected
- * @param {Function} propOnNodeClick - External node click handler
- * @param {Object} tree - Tree data structure with getRoot method
- * @param {Object} indexSizes - Map of index sizes
- * @param {Function} handleOptionClick - Layout option change handler
- * @param {Function} swapChildren - Function to swap node children
- * @param {Function} recalculateTreeAndOperations - Function to recalculate tree
- * @param {Function} addPermutationNode - Function to add permutation node
- * @param {Function} removePermutationNode - Function to remove permutation node
+ * @param {FlowProps} props - Component properties
  */
 const Flow = ({
   nodes = [],
@@ -182,6 +189,19 @@ const Flow = ({
   addPermutationNode,
   removePermutationNode
 }) => {
+  /* === State Management === */
+
+  /**
+   * UI state controlling visual aspects of the flow
+   * @type {Object}
+   * @property {Object|null} hoveredNode - Currently hovered node
+   * @property {Object|null} selectedNode - Currently selected node
+   * @property {boolean} showPanel - Controls panel visibility
+   * @property {boolean} showOperations - Controls operation percentage visibility
+   * @property {boolean} showSizes - Controls size visibility
+   * @property {boolean} hoverEnabled - Controls hover functionality
+   * @property {boolean} highlightMode - Controls highlight mode
+   */
   const [uiState, setUiState] = useState({
     hoveredNode: null,
     selectedNode: null,
@@ -192,23 +212,41 @@ const Flow = ({
     highlightMode: false
   });
 
+  /**
+   * Search and highlight state
+   * @type {Object}
+   * @property {string} searchIndices - Current search query
+   * @property {Set} searchedNodes - Set of nodes matching search
+   * @property {Set} highlightedNodes - Set of highlighted nodes
+   */
   const [searchState, setSearchState] = useState({
     searchIndices: '',
     searchedNodes: new Set(),
     highlightedNodes: new Set()
   });
 
+  /**
+   * Tree state for managing node connections and panel positioning
+   * @type {Object}
+   */
   const [treeState, setTreeState] = useState({
     connectedNodes: [],
     panelPosition: { x: 0, y: 0 }
   });
 
+  /* === Refs === */
   const refs = {
     flow: useRef(null),
     timeout: useRef(null),
     panel: useRef(null)
   };
 
+  /* === Memoized Values === */
+
+  /**
+   * Augments nodes and edges with visual properties for rendering
+   * @returns {Object} Object containing augmented nodes and edges
+   */
   const { augmentedNodes, augmentedEdges } = useMemo(() => {
     if (!nodes.length) return { augmentedNodes: nodes, augmentedEdges: edges };
 
@@ -254,6 +292,14 @@ const Flow = ({
     };
   }, [nodes, edges, uiState.showOperations, searchState.highlightedNodes, searchState.searchedNodes]);
 
+  /* === Tree Operations === */
+
+  /**
+   * Recursively finds connected nodes in the tree structure
+   * @param {Object} lookUpNode - Node to start search from
+   * @param {Object} node - Target node to find
+   * @returns {Object|null} Connected node data or null if not found
+   */
   const findConnectedNodes = useCallback((lookUpNode, node) => {
     if (!lookUpNode) return null;
     if (lookUpNode.id === node.id) {
@@ -269,6 +315,10 @@ const Flow = ({
     return findConnectedNodes(lookUpNode.right, node);
   }, []);
 
+  /**
+   * Handles node highlighting and manages highlight state
+   * @param {Object} node - Node to highlight/unhighlight
+   */
   const onHighlightNode = useCallback((node) => {
     const getDescendants = (nodeId) => {
       const descendants = new Set();
@@ -312,6 +362,12 @@ const Flow = ({
     }
   }, [searchState.highlightedNodes, augmentedEdges]);
 
+  /* === Event Handlers === */
+
+  /**
+   * Handles search functionality for nodes
+   * @param {string} searchValue - Search input value
+   */
   const handleSearch = useCallback((searchValue) => {
     const trimmedValue = searchValue.replace(/\s/g, '');
     setSearchState(prevState => ({ ...prevState, searchIndices: trimmedValue }));
@@ -340,6 +396,11 @@ const Flow = ({
     setSearchState(prevState => ({ ...prevState, searchedNodes: getAllNodesWithIndices() }));
   }, [nodes]);
 
+  /**
+   * Handles node click events and mode switching
+   * @param {Event} event - Click event
+   * @param {Object} node - Clicked node
+   */
   const handleNodeClick = useCallback((event, node) => {
     if (uiState.highlightMode) {
       event.preventDefault();
@@ -353,6 +414,11 @@ const Flow = ({
     }
   }, [uiState.highlightMode, propOnNodeClick, findConnectedNodes, tree, onHighlightNode]);
 
+  /**
+   * Handles node mouse enter events
+   * @param {Event} event - Mouse enter event
+   * @param {Object} node - Hovered node
+   */
   const handleNodeMouseEnter = useCallback((event, node) => {
     if (!uiState.hoverEnabled || uiState.selectedNode) return;
     if (uiState.selectedNode && !node.data.left) return;
@@ -363,6 +429,9 @@ const Flow = ({
     setTreeState(prevState => ({ ...prevState, connectedNodes: findConnectedNodes(tree.getRoot(), node) }));
   }, [findConnectedNodes, tree, uiState.hoverEnabled, uiState.selectedNode, refs.timeout]);
 
+  /**
+   * Handles node mouse leave events
+   */
   const handleNodeMouseLeave = useCallback(() => {
     refs.timeout.current = setTimeout(() => {
       if (!uiState.selectedNode) {
@@ -372,6 +441,9 @@ const Flow = ({
     }, 100);
   }, [uiState.selectedNode, refs.timeout]);
 
+  /**
+   * Toggles the visibility of operation percentages
+   */
   const toggleOperations = useCallback(() => {
     if (refs.timeout.current) {
       clearTimeout(refs.timeout.current);
@@ -381,6 +453,9 @@ const Flow = ({
     }, 100);
   }, [refs.timeout]);
 
+  /**
+   * Toggles the hover behavior
+   */
   const toggleHoverBehavior = useCallback(() => {
     setUiState(prevState => ({ ...prevState, hoverEnabled: !prevState.hoverEnabled }));
     if (uiState.hoverEnabled && !uiState.selectedNode) {
@@ -389,6 +464,9 @@ const Flow = ({
     }
   }, [uiState.hoverEnabled, uiState.selectedNode]);
 
+  /**
+   * Toggles the highlight mode
+   */
   const toggleHighlightMode = useCallback(() => {
     setUiState(prevState => ({ ...prevState, highlightMode: !prevState.highlightMode }));
     if (uiState.highlightMode) {
@@ -396,6 +474,9 @@ const Flow = ({
     }
   }, [uiState.highlightMode]);
 
+  /**
+   * Handles the creation of a shareable URL from highlighted nodes
+   */
   const handleCreateHighlightShare = useCallback(() => {
     if (searchState.highlightedNodes.size === 0) {
       Toast.show("No nodes selected");
@@ -466,6 +547,10 @@ const Flow = ({
       });
   }, [searchState.highlightedNodes, nodes, indexSizes, tree]);
 
+  /**
+   * Handles control button click events
+   * @param {Event} event - Click event
+   */
   const handleControlButtonClick = useCallback((event) => {
     const button = event.currentTarget;
     const rect = button.getBoundingClientRect();
@@ -473,10 +558,16 @@ const Flow = ({
     setUiState(prevState => ({ ...prevState, showPanel: !prevState.showPanel }));
   }, []);
 
+  /**
+   * Handles mouse enter events on the panel
+   */
   const handlePanelMouseEnter = useCallback(() => {
     clearTimeout(refs.timeout.current);
   }, [refs.timeout]);
 
+  /**
+   * Handles mouse leave events on the panel
+   */
   const handlePanelMouseLeave = useCallback(() => {
     if (!uiState.selectedNode) {
       refs.timeout.current = setTimeout(() => {
@@ -486,6 +577,10 @@ const Flow = ({
     }
   }, [uiState.selectedNode, refs.timeout]);
 
+  /**
+   * Handles swapping of children nodes
+   * @param {Object} node - Node whose children are to be swapped
+   */
   const handleSwapChildren = useCallback(async (node) => {
     const updatedTree = await swapChildren(node);
 
@@ -497,6 +592,11 @@ const Flow = ({
     }
   }, [swapChildren, findConnectedNodes]);
 
+  /* === Effects === */
+
+  /**
+   * Handles click outside panel for panel dismissal
+   */
   useEffect(() => {
     const handleClickOutside = (event) => {
       const isClickInsidePanel = refs.panel.current && refs.panel.current.contains(event.target);
@@ -514,15 +614,23 @@ const Flow = ({
     };
   }, [uiState.showPanel, indexSizes, refs.panel]);
 
+  /**
+   * Handles layout option click events
+   * @param {string} option - Selected layout option
+   */
   const handleOptionClickFlow = useCallback((option) => {
     setUiState(prevState => ({ ...prevState, showPanel: false }));
     handleOptionClick(option);
   }, [handleOptionClick]);
 
+  /**
+   * Toggles the visibility of sizes
+   */
   const handleToggleSizes = useCallback(() => {
     setUiState(prevState => ({ ...prevState, showSizes: !prevState.showSizes }));
   }, []);
 
+  /* === Render === */
   const activeNode = uiState.selectedNode || uiState.hoveredNode;
 
   return (
