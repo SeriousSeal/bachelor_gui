@@ -1,28 +1,58 @@
+/**
+ * Core React and ReactFlow Imports
+ */
 import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react';
-import InfoPanel from './InfoPanel';
-import { TbLayoutDistributeHorizontal } from "react-icons/tb";
-import { TbEyeCancel, TbEyeCheck } from "react-icons/tb";
+import ReactFlow, { Background, Controls, Handle, Position, ControlButton, Panel } from 'reactflow';
 import { createPortal } from 'react-dom';
-import { LayoutOptionType } from '../utils/constants';
-import { TbPercentage } from "react-icons/tb";
-import { TbHighlight, TbCheck } from "react-icons/tb";  // Add imports at the top
-import { Toast } from '../common/Toast';
-import { createShareableUrl } from '../utils/compression';
-import ReactFlow, {
-  Background,
-  Controls,
-  Handle,
-  Position,
-  ControlButton,
-  Panel  // Add Panel to imports
-} from 'reactflow';
 import 'reactflow/dist/style.css';
+
+/**
+ * Component Imports
+ */
+import InfoPanel from './InfoPanel';
 import { ResponsiveProvider } from '../utils/responsiveContext';
+import { Toast } from '../common/Toast';
+
+/**
+ * Icon Imports
+ */
+import {
+  TbLayoutDistributeHorizontal,
+  TbEyeCancel,
+  TbEyeCheck,
+  TbPercentage,
+  TbHighlight,
+  TbCheck
+} from "react-icons/tb";
+
+/**
+ * Utility Imports
+ */
+import { LayoutOptionType } from '../utils/constants';
+import { createShareableUrl } from '../utils/compression';
 import { scaleLinear } from 'd3-scale';
 
+/* ====================== Utility Functions ====================== */
+
+/**
+ * Generates a color based on a percentage value using d3 scale
+ * @param {number} percentage - Value between 0 and 100
+ * @returns {string} Color in hex format
+ */
+const getColorForPercentage = (percentage) => {
+  const colorScale = scaleLinear()
+    .domain([0, 100])
+    .range(['#add8e6', '#00008b']);
+  return colorScale(percentage);
+};
+
+/* ====================== Node Component ====================== */
+
+/**
+ * Custom node component for the flow diagram
+ */
 const NODE_TYPES = {
   custom: React.memo(({ data }) => {
-    // Memoize expensive calculations
     const displayData = useMemo(() => {
       const fullLabel = Array.isArray(data.label) ? data.label.join(',') : data.label;
       const maxLength = 14;
@@ -45,7 +75,6 @@ const NODE_TYPES = {
     const isHighlighted = data.isHighlighted;
     const isSearchResult = data.isSearchResult;
 
-    // Choose different colors based on node state
     const getNodeStyle = () => {
       if (data.isFaulty) {
         return {
@@ -54,12 +83,12 @@ const NODE_TYPES = {
         };
       } else if (isSearchResult) {
         return {
-          background: '#fff3cd',  // Light yellow background
-          border: `1px solid #ffc107`  // Yellow border
+          background: '#fff3cd',
+          border: `1px solid #ffc107`
         };
       } else if (isHighlighted) {
         return {
-          background: '#e3f2fd',  // Original highlight blue
+          background: '#e3f2fd',
           border: `1px solid #2196f3`
         };
       }
@@ -120,14 +149,24 @@ const NODE_TYPES = {
   })
 };
 
-const getColorForPercentage = (percentage) => {
-  const colorScale = scaleLinear()
-    .domain([0, 100])
-    .range(['#add8e6', '#00008b']); // Light blue to dark blue
-  return colorScale(percentage);
-};
+/* ====================== Main Flow Component ====================== */
 
-
+/**
+ * Main Flow component for rendering and managing the flow diagram
+ * @param {Object[]} nodes - Array of node objects to render
+ * @param {Object[]} edges - Array of edge objects to connect nodes
+ * @param {Function} onNodesChange - Callback for node changes
+ * @param {Function} onEdgesChange - Callback for edge changes
+ * @param {Function} onConnect - Callback when nodes are connected
+ * @param {Function} propOnNodeClick - External node click handler
+ * @param {Object} tree - Tree data structure with getRoot method
+ * @param {Object} indexSizes - Map of index sizes
+ * @param {Function} handleOptionClick - Layout option change handler
+ * @param {Function} swapChildren - Function to swap node children
+ * @param {Function} recalculateTreeAndOperations - Function to recalculate tree
+ * @param {Function} addPermutationNode - Function to add permutation node
+ * @param {Function} removePermutationNode - Function to remove permutation node
+ */
 const Flow = ({
   nodes = [],
   edges = [],
@@ -143,51 +182,32 @@ const Flow = ({
   addPermutationNode,
   removePermutationNode
 }) => {
-  const [hoveredNode, setHoveredNode] = useState(null);
-  const [selectedNode, setSelectedNode] = useState(null);
-  const [connectedNodes, setConnectedNodes] = useState([]);
-  const [showPanel, setShowPanel] = useState(false);
-  const [hoverEnabled, setHoverEnabled] = useState(false);
-  const [showOperations, setShowOperations] = useState(false);
-  const flowRef = useRef(null);
-  const timeoutRef = useRef(null);
-  const panelRef = useRef(null);
-  const [panelPosition, setPanelPosition] = useState({ x: 0, y: 0 });
-  const [showSizes, setShowSizes] = useState(false);
-  const [highlightedNodes, setHighlightedNodes] = useState(new Set());
-  const [highlightMode, setHighlightMode] = useState(false);
-  const [searchIndices, setSearchIndices] = useState('');
-  const [searchedNodes, setSearchedNodes] = useState(new Set());
+  const [uiState, setUiState] = useState({
+    hoveredNode: null,
+    selectedNode: null,
+    showPanel: false,
+    showOperations: false,
+    showSizes: false,
+    hoverEnabled: false,
+    highlightMode: false
+  });
 
-  const handleSearch = useCallback((searchValue) => {
-    const trimmedValue = searchValue.replace(/\s/g, '');
-    setSearchIndices(trimmedValue);
+  const [searchState, setSearchState] = useState({
+    searchIndices: '',
+    searchedNodes: new Set(),
+    highlightedNodes: new Set()
+  });
 
-    if (!trimmedValue) {
-      setSearchedNodes(new Set());
-      return;
-    }
+  const [treeState, setTreeState] = useState({
+    connectedNodes: [],
+    panelPosition: { x: 0, y: 0 }
+  });
 
-    const searchedIndices = trimmedValue.split(',').filter(Boolean);
-
-    // Find all nodes that contain ALL of the searched indices
-    const getAllNodesWithIndices = () => {
-      const nodesWithIndices = new Set();
-      nodes.forEach(node => {
-        if (node.data.label) {
-          // Check if node contains ALL searched indices
-          const containsAllIndices = searchedIndices.every(searchIdx =>
-            node.data.label.includes(searchIdx));
-          if (containsAllIndices) {
-            nodesWithIndices.add(node.id);
-          }
-        }
-      });
-      return nodesWithIndices;
-    };
-
-    setSearchedNodes(getAllNodesWithIndices());
-  }, [nodes]);
+  const refs = {
+    flow: useRef(null),
+    timeout: useRef(null),
+    panel: useRef(null)
+  };
 
   const { augmentedNodes, augmentedEdges } = useMemo(() => {
     if (!nodes.length) return { augmentedNodes: nodes, augmentedEdges: edges };
@@ -196,9 +216,9 @@ const Flow = ({
       ...node,
       data: {
         ...node.data,
-        showOperations: showOperations,
-        isHighlighted: highlightedNodes.has(node.id),
-        isSearchResult: searchedNodes.has(node.id)  // Add this property
+        showOperations: uiState.showOperations,
+        isHighlighted: searchState.highlightedNodes.has(node.id),
+        isSearchResult: searchState.searchedNodes.has(node.id)
       }
     }));
 
@@ -213,7 +233,6 @@ const Flow = ({
 
       const sourceNode = nodes.find(n => n.id === edge.source);
       if (sourceNode?.data?.operationsPercentage) {
-        // Calculate color based on operations percentage
         const percentage = (sourceNode.data.operations / sourceNode.data.totalOperations) * 100;
         return {
           ...defaultEdgeStyle,
@@ -233,29 +252,7 @@ const Flow = ({
       augmentedNodes: modifiedNodes,
       augmentedEdges: modifiedEdges
     };
-  }, [nodes, edges, showOperations, highlightedNodes, searchedNodes]);  // Added searchedNodes dependency
-
-  const toggleOperations = useCallback(() => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-    timeoutRef.current = setTimeout(() => {
-      setShowOperations(prev => !prev);
-    }, 100);
-  }, []);
-
-  const handleOptionClickFlow = useCallback((option) => {
-    setShowPanel(false);
-    handleOptionClick(option);
-  }, [handleOptionClick]);
-
-  const toggleHoverBehavior = useCallback(() => {
-    setHoverEnabled(prev => !prev);
-    if (hoverEnabled && !selectedNode) {
-      setHoveredNode(null);
-      setConnectedNodes([]);
-    }
-  }, [hoverEnabled, selectedNode]);
+  }, [nodes, edges, uiState.showOperations, searchState.highlightedNodes, searchState.searchedNodes]);
 
   const findConnectedNodes = useCallback((lookUpNode, node) => {
     if (!lookUpNode) return null;
@@ -271,25 +268,6 @@ const Flow = ({
 
     return findConnectedNodes(lookUpNode.right, node);
   }, []);
-
-  const handleNodeMouseEnter = useCallback((event, node) => {
-    if (!hoverEnabled || selectedNode) return; // Früher Return wenn Hover deaktiviert ist
-    if (selectedNode && !node.data.left) return; // Früher Return wenn Node keine Kinder hat
-    console.log(node)
-
-    clearTimeout(timeoutRef.current);
-    setHoveredNode(node);
-    setConnectedNodes(findConnectedNodes(tree.getRoot(), node));
-  }, [findConnectedNodes, tree, hoverEnabled, selectedNode]);
-
-  const handleNodeMouseLeave = useCallback(() => {
-    timeoutRef.current = setTimeout(() => {
-      if (!selectedNode) {
-        setHoveredNode(null);
-        setConnectedNodes([]);
-      }
-    }, 100);
-  }, [selectedNode]);
 
   const onHighlightNode = useCallback((node) => {
     const getDescendants = (nodeId) => {
@@ -316,72 +294,127 @@ const Flow = ({
 
     const isChildOfHighlighted = (nodeId) => {
       const parents = getParents(nodeId);
-      return Array.from(parents).some(parentId => highlightedNodes.has(parentId));
+      return Array.from(parents).some(parentId => searchState.highlightedNodes.has(parentId));
     };
 
-    // Handle different cases
-    if (highlightedNodes.has(node.id)) {
-      // Case 1: Node is highlighted -> remove node and descendants
+    if (searchState.highlightedNodes.has(node.id)) {
       const descendantsToRemove = getDescendants(node.id);
-      const newHighlightedNodes = new Set(highlightedNodes);
+      const newHighlightedNodes = new Set(searchState.highlightedNodes);
       descendantsToRemove.forEach(id => newHighlightedNodes.delete(id));
-      setHighlightedNodes(newHighlightedNodes);
+      setSearchState(prevState => ({ ...prevState, highlightedNodes: newHighlightedNodes }));
     } else if (isChildOfHighlighted(node.id)) {
-      // Case 2: Node is unhighlighted child of highlighted node -> add node only
-      const newHighlightedNodes = new Set(highlightedNodes);
+      const newHighlightedNodes = new Set(searchState.highlightedNodes);
       const descendants = getDescendants(node.id);
       descendants.forEach(id => newHighlightedNodes.add(id));
-      setHighlightedNodes(newHighlightedNodes);
+      setSearchState(prevState => ({ ...prevState, highlightedNodes: newHighlightedNodes }));
     } else {
-      // Case 3: Normal selection behavior
-      setHighlightedNodes(getDescendants(node.id));
+      setSearchState(prevState => ({ ...prevState, highlightedNodes: getDescendants(node.id) }));
     }
-  }, [highlightedNodes, augmentedEdges]);
+  }, [searchState.highlightedNodes, augmentedEdges]);
+
+  const handleSearch = useCallback((searchValue) => {
+    const trimmedValue = searchValue.replace(/\s/g, '');
+    setSearchState(prevState => ({ ...prevState, searchIndices: trimmedValue }));
+
+    if (!trimmedValue) {
+      setSearchState(prevState => ({ ...prevState, searchedNodes: new Set() }));
+      return;
+    }
+
+    const searchedIndices = trimmedValue.split(',').filter(Boolean);
+
+    const getAllNodesWithIndices = () => {
+      const nodesWithIndices = new Set();
+      nodes.forEach(node => {
+        if (node.data.label) {
+          const containsAllIndices = searchedIndices.every(searchIdx =>
+            node.data.label.includes(searchIdx));
+          if (containsAllIndices) {
+            nodesWithIndices.add(node.id);
+          }
+        }
+      });
+      return nodesWithIndices;
+    };
+
+    setSearchState(prevState => ({ ...prevState, searchedNodes: getAllNodesWithIndices() }));
+  }, [nodes]);
 
   const handleNodeClick = useCallback((event, node) => {
-    if (highlightMode) {
+    if (uiState.highlightMode) {
       event.preventDefault();
       onHighlightNode(node);
     } else {
-      setSelectedNode(node);
-      setConnectedNodes(findConnectedNodes(tree.getRoot(), node));
+      setUiState(prevState => ({ ...prevState, selectedNode: node }));
+      setTreeState(prevState => ({ ...prevState, connectedNodes: findConnectedNodes(tree.getRoot(), node) }));
       if (propOnNodeClick) {
         propOnNodeClick(event, node);
       }
     }
-  }, [highlightMode, propOnNodeClick, findConnectedNodes, tree, onHighlightNode]);
+  }, [uiState.highlightMode, propOnNodeClick, findConnectedNodes, tree, onHighlightNode]);
 
+  const handleNodeMouseEnter = useCallback((event, node) => {
+    if (!uiState.hoverEnabled || uiState.selectedNode) return;
+    if (uiState.selectedNode && !node.data.left) return;
+    console.log(node);
 
+    clearTimeout(refs.timeout.current);
+    setUiState(prevState => ({ ...prevState, hoveredNode: node }));
+    setTreeState(prevState => ({ ...prevState, connectedNodes: findConnectedNodes(tree.getRoot(), node) }));
+  }, [findConnectedNodes, tree, uiState.hoverEnabled, uiState.selectedNode, refs.timeout]);
+
+  const handleNodeMouseLeave = useCallback(() => {
+    refs.timeout.current = setTimeout(() => {
+      if (!uiState.selectedNode) {
+        setUiState(prevState => ({ ...prevState, hoveredNode: null }));
+        setTreeState(prevState => ({ ...prevState, connectedNodes: [] }));
+      }
+    }, 100);
+  }, [uiState.selectedNode, refs.timeout]);
+
+  const toggleOperations = useCallback(() => {
+    if (refs.timeout.current) {
+      clearTimeout(refs.timeout.current);
+    }
+    refs.timeout.current = setTimeout(() => {
+      setUiState(prevState => ({ ...prevState, showOperations: !prevState.showOperations }));
+    }, 100);
+  }, [refs.timeout]);
+
+  const toggleHoverBehavior = useCallback(() => {
+    setUiState(prevState => ({ ...prevState, hoverEnabled: !prevState.hoverEnabled }));
+    if (uiState.hoverEnabled && !uiState.selectedNode) {
+      setUiState(prevState => ({ ...prevState, hoveredNode: null }));
+      setTreeState(prevState => ({ ...prevState, connectedNodes: [] }));
+    }
+  }, [uiState.hoverEnabled, uiState.selectedNode]);
 
   const toggleHighlightMode = useCallback(() => {
-    setHighlightMode(prev => !prev);
-    if (highlightMode) {
-      setHighlightedNodes(new Set());
+    setUiState(prevState => ({ ...prevState, highlightMode: !prevState.highlightMode }));
+    if (uiState.highlightMode) {
+      setSearchState(prevState => ({ ...prevState, highlightedNodes: new Set() }));
     }
-  }, [highlightMode]);
+  }, [uiState.highlightMode]);
 
   const handleCreateHighlightShare = useCallback(() => {
-    if (highlightedNodes.size === 0) {
+    if (searchState.highlightedNodes.size === 0) {
       Toast.show("No nodes selected");
       return;
     }
 
-    // Get the tree structure from the actual tree, not the visual nodes
     const hasDisconnectedNodes = (node) => {
       if (!node) return false;
 
-      // If this node has both children
       if (node.left && node.right) {
-        const isNodeHighlighted = highlightedNodes.has(node.id);
-        const isLeftHighlighted = highlightedNodes.has(node.left.id);
-        const isRightHighlighted = highlightedNodes.has(node.right.id);
+        const isNodeHighlighted = searchState.highlightedNodes.has(node.id);
+        const isLeftHighlighted = searchState.highlightedNodes.has(node.left.id);
+        const isRightHighlighted = searchState.highlightedNodes.has(node.right.id);
 
         if (isNodeHighlighted && isLeftHighlighted !== isRightHighlighted) {
           return true;
         }
       }
 
-      // Recursively check children
       return hasDisconnectedNodes(node.left) || hasDisconnectedNodes(node.right);
     };
 
@@ -393,23 +426,21 @@ const Flow = ({
       if (!shouldProceed) return;
     }
 
-    // Create a subset of indexSizes containing only the indices used in highlighted nodes
     const relevantIndices = new Set();
     nodes.forEach(node => {
-      if (highlightedNodes.has(node.id) && node.data.label) {
+      if (searchState.highlightedNodes.has(node.id) && node.data.label) {
         node.data.label.forEach(idx => relevantIndices.add(idx));
       }
     });
 
     const filteredSizes = {};
     relevantIndices.forEach(idx => {
-      if (indexSizes[idx] !== undefined) {  // Changed from if (indexSizes[idx])
+      if (indexSizes[idx] !== undefined) {
         filteredSizes[idx] = indexSizes[idx];
       }
     });
 
-    // Create subtree expression from highlighted nodes
-    const subtreeExpression = tree.createSubtreeExpression(Array.from(highlightedNodes));
+    const subtreeExpression = tree.createSubtreeExpression(Array.from(searchState.highlightedNodes));
 
     if (!subtreeExpression || Object.keys(filteredSizes).length === 0) {
       Toast.show('Failed to create share URL: Invalid data');
@@ -426,22 +457,53 @@ const Flow = ({
     navigator.clipboard.writeText(url)
       .then(() => {
         Toast.show('Share URL copied to clipboard!');
-        setHighlightMode(false);
-        setHighlightedNodes(new Set());
+        setUiState(prevState => ({ ...prevState, highlightMode: false }));
+        setSearchState(prevState => ({ ...prevState, highlightedNodes: new Set() }));
       })
       .catch(err => {
         console.error('Failed to copy URL:', err);
         Toast.show('Failed to copy URL to clipboard');
       });
-  }, [highlightedNodes, nodes, indexSizes, tree]);
+  }, [searchState.highlightedNodes, nodes, indexSizes, tree]);
+
+  const handleControlButtonClick = useCallback((event) => {
+    const button = event.currentTarget;
+    const rect = button.getBoundingClientRect();
+    setTreeState(prevState => ({ ...prevState, panelPosition: { x: rect.right + 10, y: rect.top } }));
+    setUiState(prevState => ({ ...prevState, showPanel: !prevState.showPanel }));
+  }, []);
+
+  const handlePanelMouseEnter = useCallback(() => {
+    clearTimeout(refs.timeout.current);
+  }, [refs.timeout]);
+
+  const handlePanelMouseLeave = useCallback(() => {
+    if (!uiState.selectedNode) {
+      refs.timeout.current = setTimeout(() => {
+        setUiState(prevState => ({ ...prevState, hoveredNode: null }));
+        setTreeState(prevState => ({ ...prevState, connectedNodes: [] }));
+      }, 100);
+    }
+  }, [uiState.selectedNode, refs.timeout]);
+
+  const handleSwapChildren = useCallback(async (node) => {
+    const updatedTree = await swapChildren(node);
+
+    if (updatedTree) {
+      const updatedConnectedNodes = findConnectedNodes(updatedTree.getRoot(), node);
+
+      setTreeState(prevState => ({ ...prevState, connectedNodes: updatedConnectedNodes }));
+      setUiState(prevState => ({ ...prevState, selectedNode: node }));
+    }
+  }, [swapChildren, findConnectedNodes]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      const isClickInsidePanel = panelRef.current && panelRef.current.contains(event.target);
+      const isClickInsidePanel = refs.panel.current && refs.panel.current.contains(event.target);
       const isClickOnControlButton = event.target.closest('.react-flow__controls-button');
 
-      if (showPanel && !isClickInsidePanel && !isClickOnControlButton) {
-        setShowPanel(false);
+      if (uiState.showPanel && !isClickInsidePanel && !isClickOnControlButton) {
+        setUiState(prevState => ({ ...prevState, showPanel: false }));
       }
     };
 
@@ -450,54 +512,24 @@ const Flow = ({
     return () => {
       document.removeEventListener('pointerdown', handleClickOutside, true);
     };
-  }, [showPanel, indexSizes]);
+  }, [uiState.showPanel, indexSizes, refs.panel]);
 
-  const handleControlButtonClick = useCallback((event) => {
-    const button = event.currentTarget;
-    const rect = button.getBoundingClientRect();
-    setPanelPosition({ x: rect.right + 10, y: rect.top });
-    setShowPanel(prev => !prev);
-  }, []);
-
-  const handlePanelMouseEnter = useCallback(() => {
-    clearTimeout(timeoutRef.current);
-  }, []);
-
-  const handlePanelMouseLeave = useCallback(() => {
-    if (!selectedNode) {
-      timeoutRef.current = setTimeout(() => {
-        setHoveredNode(null);
-        setConnectedNodes([]);
-      }, 100);
-    }
-  }, [selectedNode]);
+  const handleOptionClickFlow = useCallback((option) => {
+    setUiState(prevState => ({ ...prevState, showPanel: false }));
+    handleOptionClick(option);
+  }, [handleOptionClick]);
 
   const handleToggleSizes = useCallback(() => {
-    setShowSizes(prev => !prev);
+    setUiState(prevState => ({ ...prevState, showSizes: !prevState.showSizes }));
   }, []);
 
-  // Add handler for swap operation
-  const handleSwapChildren = useCallback(async (node) => {
-    // Wait for the tree to be updated
-    const updatedTree = await swapChildren(node);
-
-    if (updatedTree) {
-      // Get the updated connected nodes from the new tree
-      const updatedConnectedNodes = findConnectedNodes(updatedTree.getRoot(), node);
-
-      // Update the states with the new data
-      setConnectedNodes(updatedConnectedNodes);
-      setSelectedNode(node);
-    }
-  }, [swapChildren, findConnectedNodes]);
-
-  const activeNode = selectedNode || hoveredNode;
+  const activeNode = uiState.selectedNode || uiState.hoveredNode;
 
   return (
     <ResponsiveProvider>
       <div style={{ width: '100%', height: '100%' }}>
         <ReactFlow
-          ref={flowRef}
+          ref={refs.flow}
           nodes={augmentedNodes}
           edges={augmentedEdges}
           onNodesChange={onNodesChange}
@@ -524,26 +556,26 @@ const Flow = ({
             </ControlButton>
             <ControlButton
               onClick={toggleHoverBehavior}
-              className={`hover - toggle ${hoverEnabled ? 'active' : ''} `}
-              title={hoverEnabled ? 'Disable Hover' : 'Enable Hover'}
+              className={`hover - toggle ${uiState.hoverEnabled ? 'active' : ''} `}
+              title={uiState.hoverEnabled ? 'Disable Hover' : 'Enable Hover'}
             >
-              {hoverEnabled ? <TbEyeCheck /> : <TbEyeCancel />}
+              {uiState.hoverEnabled ? <TbEyeCheck /> : <TbEyeCancel />}
             </ControlButton>
             <ControlButton
               onClick={toggleOperations}
-              className={`operations - toggle ${showOperations ? 'active' : ''} `}
-              title={showOperations ? 'Hide Operation Percentages' : 'Show Operation Percentages'}
+              className={`operations - toggle ${uiState.showOperations ? 'active' : ''} `}
+              title={uiState.showOperations ? 'Hide Operation Percentages' : 'Show Operation Percentages'}
             >
               <TbPercentage />
             </ControlButton>
             <ControlButton
               onClick={toggleHighlightMode}
-              className={`highlight-mode ${highlightMode ? 'active' : ''}`}
-              title={highlightMode ? 'Exit Highlight Mode' : 'Enter Highlight Mode'}
+              className={`highlight-mode ${uiState.highlightMode ? 'active' : ''}`}
+              title={uiState.highlightMode ? 'Exit Highlight Mode' : 'Enter Highlight Mode'}
             >
               <TbHighlight />
             </ControlButton>
-            {highlightMode && (
+            {uiState.highlightMode && (
               <ControlButton
                 onClick={handleCreateHighlightShare}
                 title="Create Share URL from Highlighted Nodes"
@@ -553,39 +585,38 @@ const Flow = ({
             )}
           </Controls>
           <Background variant="dots" gap={12} size={1} />
-          {!highlightMode && activeNode && (
+          {!uiState.highlightMode && activeNode && (
             <div
               onMouseEnter={handlePanelMouseEnter}
               onMouseLeave={handlePanelMouseLeave}
             >
               <InfoPanel
-                key={`${connectedNodes.value}-${connectedNodes.left?.value}-${connectedNodes.right?.value}`}
-                node={activeNode ?? hoveredNode}
-                connectedNodes={connectedNodes}
-                setConnectedNodes={setConnectedNodes}
+                key={`${treeState.connectedNodes.value}-${treeState.connectedNodes.left?.value}-${treeState.connectedNodes.right?.value}`}
+                node={activeNode ?? uiState.hoveredNode}
+                connectedNodes={treeState.connectedNodes}
+                setConnectedNodes={setTreeState}
                 onClose={() => {
-                  setSelectedNode(null);
-                  setHoveredNode(null);
-                  setConnectedNodes([]);
+                  setUiState(prevState => ({ ...prevState, selectedNode: null, hoveredNode: null }));
+                  setTreeState(prevState => ({ ...prevState, connectedNodes: [] }));
                 }}
                 initialPosition={{ x: 12, y: 8 }}
                 indexSizes={indexSizes}
-                showSizes={showSizes}
+                showSizes={uiState.showSizes}
                 onToggleSizes={handleToggleSizes}
                 swapChildren={handleSwapChildren}
                 recalculateTreeAndOperations={recalculateTreeAndOperations}
                 addPermutationNode={addPermutationNode}
-                removePermutationNode={removePermutationNode}  // Add this prop
+                removePermutationNode={removePermutationNode}
               />
             </div>
           )}
-          {showPanel && createPortal(
+          {uiState.showPanel && createPortal(
             <div
-              ref={panelRef}
+              ref={refs.panel}
               className="fixed bg-white border border-gray-200 p-3 w-48 shadow-md rounded-md z-50 text-sm"
               style={{
-                left: panelPosition.x,
-                top: panelPosition.y
+                left: treeState.panelPosition.x,
+                top: treeState.panelPosition.y
               }}
             >
               <h3 className="text-base font-medium mb-1">Choose a layout:</h3>
@@ -607,12 +638,12 @@ const Flow = ({
             <div className="flex items-center gap-2">
               <input
                 type="text"
-                value={searchIndices}
+                value={searchState.searchIndices}
                 onChange={(e) => handleSearch(e.target.value)}
                 placeholder="Search indices (e.g. 1,2,3)"
                 className="p-1 border border-gray-300 rounded text-sm w-48"
               />
-              {searchIndices && (
+              {searchState.searchIndices && (
                 <button
                   onClick={() => handleSearch('')}
                   className="text-gray-500 hover:text-gray-700"
