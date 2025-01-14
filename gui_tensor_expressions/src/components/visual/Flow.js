@@ -5,12 +5,16 @@ import { TbEyeCancel, TbEyeCheck } from "react-icons/tb";
 import { createPortal } from 'react-dom';
 import { LayoutOptionType } from '../utils/constants';
 import { TbPercentage } from "react-icons/tb";
+import { TbHighlight, TbCheck } from "react-icons/tb";  // Add imports at the top
+import { Toast } from '../common/Toast';
+import { createShareableUrl } from '../utils/compression';
 import ReactFlow, {
   Background,
   Controls,
   Handle,
   Position,
-  ControlButton
+  ControlButton,
+  Panel  // Add Panel to imports
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { ResponsiveProvider } from '../utils/responsiveContext';
@@ -39,13 +43,38 @@ const NODE_TYPES = {
     }, [data.label, data.showOperations, data.operationsPercentage]);
 
     const isHighlighted = data.isHighlighted;
+    const isSearchResult = data.isSearchResult;
+
+    // Choose different colors based on node state
+    const getNodeStyle = () => {
+      if (data.isFaulty) {
+        return {
+          background: '#fff',
+          border: '2px solid red'
+        };
+      } else if (isSearchResult) {
+        return {
+          background: '#fff3cd',  // Light yellow background
+          border: `1px solid #ffc107`  // Yellow border
+        };
+      } else if (isHighlighted) {
+        return {
+          background: '#e3f2fd',  // Original highlight blue
+          border: `1px solid #2196f3`
+        };
+      }
+      return {
+        background: '#fff',
+        border: '1px solid #777'
+      };
+    };
+
+    const nodeStyle = getNodeStyle();
 
     return (
       <div style={{
-        background: isHighlighted ? '#e3f2fd' : '#fff',
-        borderColor: isHighlighted ? '#2196f3' : '#777',
-        opacity: isHighlighted ? 1 : 0.7,
-        border: data.isFaulty ? '2px solid red' : '1px solid #777',
+        ...nodeStyle,
+        opacity: (isHighlighted || isSearchResult) ? 1 : 0.7,
         borderRadius: '8px',
         width: `${displayData.nodeWidth}px`,
         height: displayData.operationPercentage ? '60px' : '40px',
@@ -112,7 +141,7 @@ const Flow = ({
   swapChildren = () => { },
   recalculateTreeAndOperations,
   addPermutationNode,
-  removePermutationNode  // Add this prop
+  removePermutationNode
 }) => {
   const [hoveredNode, setHoveredNode] = useState(null);
   const [selectedNode, setSelectedNode] = useState(null);
@@ -126,7 +155,39 @@ const Flow = ({
   const [panelPosition, setPanelPosition] = useState({ x: 0, y: 0 });
   const [showSizes, setShowSizes] = useState(false);
   const [highlightedNodes, setHighlightedNodes] = useState(new Set());
+  const [highlightMode, setHighlightMode] = useState(false);
+  const [searchIndices, setSearchIndices] = useState('');
+  const [searchedNodes, setSearchedNodes] = useState(new Set());
 
+  const handleSearch = useCallback((searchValue) => {
+    const trimmedValue = searchValue.replace(/\s/g, '');
+    setSearchIndices(trimmedValue);
+
+    if (!trimmedValue) {
+      setSearchedNodes(new Set());
+      return;
+    }
+
+    const searchedIndices = trimmedValue.split(',').filter(Boolean);
+
+    // Find all nodes that contain ALL of the searched indices
+    const getAllNodesWithIndices = () => {
+      const nodesWithIndices = new Set();
+      nodes.forEach(node => {
+        if (node.data.label) {
+          // Check if node contains ALL searched indices
+          const containsAllIndices = searchedIndices.every(searchIdx =>
+            node.data.label.includes(searchIdx));
+          if (containsAllIndices) {
+            nodesWithIndices.add(node.id);
+          }
+        }
+      });
+      return nodesWithIndices;
+    };
+
+    setSearchedNodes(getAllNodesWithIndices());
+  }, [nodes]);
 
   const { augmentedNodes, augmentedEdges } = useMemo(() => {
     if (!nodes.length) return { augmentedNodes: nodes, augmentedEdges: edges };
@@ -136,7 +197,8 @@ const Flow = ({
       data: {
         ...node.data,
         showOperations: showOperations,
-        isHighlighted: highlightedNodes.has(node.id)
+        isHighlighted: highlightedNodes.has(node.id),
+        isSearchResult: searchedNodes.has(node.id)  // Add this property
       }
     }));
 
@@ -171,7 +233,7 @@ const Flow = ({
       augmentedNodes: modifiedNodes,
       augmentedEdges: modifiedEdges
     };
-  }, [nodes, edges, showOperations, highlightedNodes]);
+  }, [nodes, edges, showOperations, highlightedNodes, searchedNodes]);  // Added searchedNodes dependency
 
   const toggleOperations = useCallback(() => {
     if (timeoutRef.current) {
@@ -229,9 +291,7 @@ const Flow = ({
     }, 100);
   }, [selectedNode]);
 
-  const handleNodeClick = useCallback((event, node) => {
-    event.preventDefault();
-
+  const onHighlightNode = useCallback((node) => {
     const getDescendants = (nodeId) => {
       const descendants = new Set();
       const stack = [nodeId];
@@ -276,13 +336,104 @@ const Flow = ({
       // Case 3: Normal selection behavior
       setHighlightedNodes(getDescendants(node.id));
     }
+  }, [highlightedNodes, augmentedEdges]);
 
-    setSelectedNode(node);
-    setConnectedNodes(findConnectedNodes(tree.getRoot(), node));
-    if (propOnNodeClick) {
-      propOnNodeClick(event, node);
+  const handleNodeClick = useCallback((event, node) => {
+    if (highlightMode) {
+      event.preventDefault();
+      onHighlightNode(node);
+    } else {
+      setSelectedNode(node);
+      setConnectedNodes(findConnectedNodes(tree.getRoot(), node));
+      if (propOnNodeClick) {
+        propOnNodeClick(event, node);
+      }
     }
-  }, [augmentedEdges, highlightedNodes, findConnectedNodes, propOnNodeClick, tree]);
+  }, [highlightMode, propOnNodeClick, findConnectedNodes, tree, onHighlightNode]);
+
+
+
+  const toggleHighlightMode = useCallback(() => {
+    setHighlightMode(prev => !prev);
+    if (highlightMode) {
+      setHighlightedNodes(new Set());
+    }
+  }, [highlightMode]);
+
+  const handleCreateHighlightShare = useCallback(() => {
+    if (highlightedNodes.size === 0) {
+      Toast.show("No nodes selected");
+      return;
+    }
+
+    // Get the tree structure from the actual tree, not the visual nodes
+    const hasDisconnectedNodes = (node) => {
+      if (!node) return false;
+
+      // If this node has both children
+      if (node.left && node.right) {
+        const isNodeHighlighted = highlightedNodes.has(node.id);
+        const isLeftHighlighted = highlightedNodes.has(node.left.id);
+        const isRightHighlighted = highlightedNodes.has(node.right.id);
+
+        if (isNodeHighlighted && isLeftHighlighted !== isRightHighlighted) {
+          return true;
+        }
+      }
+
+      // Recursively check children
+      return hasDisconnectedNodes(node.left) || hasDisconnectedNodes(node.right);
+    };
+
+    if (hasDisconnectedNodes(tree.getRoot())) {
+      const shouldProceed = window.confirm(
+        'Warning: You are creating a subtree that excludes necessary nodes. ' +
+        'This might result in a disconnected or incomplete expression. Continue?'
+      );
+      if (!shouldProceed) return;
+    }
+
+    // Create a subset of indexSizes containing only the indices used in highlighted nodes
+    const relevantIndices = new Set();
+    nodes.forEach(node => {
+      if (highlightedNodes.has(node.id) && node.data.label) {
+        node.data.label.forEach(idx => relevantIndices.add(idx));
+      }
+    });
+
+    const filteredSizes = {};
+    relevantIndices.forEach(idx => {
+      if (indexSizes[idx] !== undefined) {  // Changed from if (indexSizes[idx])
+        filteredSizes[idx] = indexSizes[idx];
+      }
+    });
+
+    // Create subtree expression from highlighted nodes
+    const subtreeExpression = tree.createSubtreeExpression(Array.from(highlightedNodes));
+
+    if (!subtreeExpression || Object.keys(filteredSizes).length === 0) {
+      Toast.show('Failed to create share URL: Invalid data');
+      return;
+    }
+
+    const url = createShareableUrl(subtreeExpression, filteredSizes);
+    if (!url) {
+      Toast.show('Failed to create share URL');
+      return;
+    }
+    console.log(url);
+
+    navigator.clipboard.writeText(url)
+      .then(() => {
+        Toast.show('Share URL copied to clipboard!');
+        setHighlightMode(false);
+        setHighlightedNodes(new Set());
+      })
+      .catch(err => {
+        console.error('Failed to copy URL:', err);
+        Toast.show('Failed to copy URL to clipboard');
+      });
+  }, [highlightedNodes, nodes, indexSizes, tree]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -385,9 +536,24 @@ const Flow = ({
             >
               <TbPercentage />
             </ControlButton>
+            <ControlButton
+              onClick={toggleHighlightMode}
+              className={`highlight-mode ${highlightMode ? 'active' : ''}`}
+              title={highlightMode ? 'Exit Highlight Mode' : 'Enter Highlight Mode'}
+            >
+              <TbHighlight />
+            </ControlButton>
+            {highlightMode && (
+              <ControlButton
+                onClick={handleCreateHighlightShare}
+                title="Create Share URL from Highlighted Nodes"
+              >
+                <TbCheck />
+              </ControlButton>
+            )}
           </Controls>
           <Background variant="dots" gap={12} size={1} />
-          {activeNode && (
+          {!highlightMode && activeNode && (
             <div
               onMouseEnter={handlePanelMouseEnter}
               onMouseLeave={handlePanelMouseLeave}
@@ -437,6 +603,25 @@ const Flow = ({
             </div>,
             document.body
           )}
+          <Panel position="bottom-right" className="bg-white shadow-md rounded-md p-2">
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={searchIndices}
+                onChange={(e) => handleSearch(e.target.value)}
+                placeholder="Search indices (e.g. 1,2,3)"
+                className="p-1 border border-gray-300 rounded text-sm w-48"
+              />
+              {searchIndices && (
+                <button
+                  onClick={() => handleSearch('')}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+          </Panel>
         </ReactFlow>
       </div>
     </ResponsiveProvider>

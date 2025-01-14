@@ -552,14 +552,21 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
   const handleShare = useCallback(() => {
     if (!einsumExpression || !indexSizes) {
       Toast.show("No einsum expression or index sizes to share");
+      return;
     }
 
     const url = createShareableUrl(einsumExpression, indexSizes);
+    if (!url) {
+      Toast.show("Failed to create share URL");
+      return;
+    }
 
-    // Copy to clipboard
     navigator.clipboard.writeText(url)
-      .then(() => alert('Share URL copied to clipboard!'))
-      .catch(err => console.error('Failed to copy URL:', err));
+      .then(() => Toast.show('Share URL copied to clipboard!'))
+      .catch(err => {
+        console.error('Failed to copy URL:', err);
+        Toast.show('Failed to copy URL to clipboard');
+      });
   }, [einsumExpression, indexSizes]);
 
   // ============= UI Helpers =============

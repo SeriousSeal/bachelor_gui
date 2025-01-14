@@ -105,7 +105,17 @@ export function parseTree(str) {
   }
 }
 
-class Node {
+/**
+ * @class Node
+ * @property {string} id - Unique identifier for the node
+ * @property {(string[]|string)} value - Node value
+ * @property {Node|null} left - Left child node
+ * @property {Node|null} right - Right child node
+ * @property {string} string - String representation of value
+ * @property {number[]|null} sizes - Array of sizes
+ * @property {boolean} deleteAble - Whether node can be deleted
+ */
+export class Node {
   constructor(value, left = null, right = null, deleteAble = false) {
     this.id = Tree.getNextId();  // Use the static method instead of direct counter access
     this.value = value;
@@ -122,7 +132,7 @@ class Node {
 }
 
 // Add this helper function to reconstruct Node objects
-function reconstructNode(nodeData) {
+export function reconstructNode(nodeData) {
   if (!nodeData) return null;
 
   // Create a new Node instance with the main properties
@@ -140,6 +150,9 @@ function reconstructNode(nodeData) {
   return node;
 }
 
+/**
+ * @class Tree
+ */
 export class Tree {
   static nodeIdCounter = 0;  // Keep the static counter
 
@@ -394,5 +407,53 @@ export class Tree {
     };
 
     return removeNode(this.root);
+  }
+
+  createSubtreeExpression(selectedNodeIds) {
+    // Find the first selected node from root
+    const findFirstSelectedNode = (node) => {
+      if (!node) return null;
+      if (selectedNodeIds.includes(node.id)) return node;
+      const leftResult = findFirstSelectedNode(node.left);
+      if (leftResult) return leftResult;
+      return findFirstSelectedNode(node.right);
+    };
+
+    const buildString = (node) => {
+      if (!node) return '';
+      if (!selectedNodeIds.includes(node.id)) return '';
+
+      // Base case: leaf node
+      if (node.isLeaf()) {
+        return `[${node.value.join(',')}]`;
+      }
+      console.log(node)
+
+      const leftStr = buildString(node.left);
+      const rightStr = buildString(node.right);
+      console.log(leftStr, rightStr)
+
+      // Case: only right child is highlighted
+      if (!leftStr && rightStr) {
+        return `[${rightStr}->[${node.value.join(',')}]]`;
+      }
+      // Case: only left child is highlighted
+      else if (leftStr && !rightStr) {
+        return `[${leftStr}->[${node.value.join(',')}]]`;
+      }
+      // Case: both children are highlighted
+      else if (leftStr && rightStr) {
+        return `[${leftStr},${rightStr}->[${node.value.join(',')}]]`;
+      }
+      // Case: no children are highlighted but current node is
+      else {
+        return `[${node.value.join(',')}]`;
+      }
+    };
+
+    const startNode = findFirstSelectedNode(this.root);
+    if (!startNode) return '';
+    const result = buildString(startNode);
+    return result.slice(1, -1);
   }
 }

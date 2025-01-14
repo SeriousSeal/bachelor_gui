@@ -16,26 +16,26 @@ export const ResponsiveProvider = ({ children }) => {
     const getResponsiveDimensions = (width, height, scale) => {
         // Adjust width and height based on scaling
         const effectiveWidth = width / scale;
-        const effectiveHeight = height / scale;
 
-        let heightObj = {}
-        if (effectiveHeight < 900) {
-            heightObj = {
-                showMiniFlow: false,
-                miniFlow: {
-                    width: 0,
-                    height: 0
-                }
-            };
-        }
+        // Remove height restriction
+        let heightObj = {
+            showMiniFlow: true
+        };
 
         if (effectiveWidth < 500) {
             return {
                 panelWidth: 260 * scale,
                 fontSize: 11 * scale,
                 padding: 8 * scale,
-                showMiniFlow: false,
-                miniFlow: { width: 0, height: 0 },
+                showMiniFlow: true, // Changed to true
+                miniFlow: { // Added miniFlow config for small screens
+                    width: 200,
+                    height: 100,
+                    nodeWidth: 60,
+                    nodeHeight: 20,
+                    fontSize: 9,
+                    letterSize: 12
+                },
                 ...heightObj
             };
         } else if (effectiveWidth < 640) {
@@ -43,8 +43,15 @@ export const ResponsiveProvider = ({ children }) => {
                 panelWidth: 280 * scale,
                 fontSize: 12 * scale,
                 padding: 10 * scale,
-                showMiniFlow: false,
-                miniFlow: { width: 0, height: 0 },
+                showMiniFlow: true, // Changed to true
+                miniFlow: {
+                    width: 220,
+                    height: 100,
+                    nodeWidth: 65,
+                    nodeHeight: 22,
+                    fontSize: 10,
+                    letterSize: 13
+                },
                 ...heightObj
             };
         } else if (effectiveWidth < 700) {
