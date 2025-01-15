@@ -11,82 +11,55 @@ export const useResponsive = () => {
 };
 
 export const ResponsiveProvider = ({ children }) => {
-    const getScalingFactor = () => window.devicePixelRatio || 1;
+    const getScalingFactor = () => {
+        const screenWidth = window.screen.width;
+        if (screenWidth <= 768) {
+            return 0.8;
+        }
+        return Math.min(window.devicePixelRatio || 1, 1.5);
+    };
 
     const getResponsiveDimensions = (width, height, scale) => {
-        // Adjust width and height based on scaling
-        const effectiveWidth = width / scale;
+        const screenWidth = window.screen.width;
+        let heightObj = { showMiniFlow: true };
 
-        // Remove height restriction
-        let heightObj = {
-            showMiniFlow: true
-        };
-
-        if (effectiveWidth < 500) {
+        // Mobile first approach
+        if (screenWidth <= 480) {  // Phone
             return {
-                panelWidth: 260 * scale,
-                fontSize: 11 * scale,
-                padding: 8 * scale,
-                showMiniFlow: true, // Changed to true
-                miniFlow: { // Added miniFlow config for small screens
-                    width: 200,
+                panelWidth: Math.min(280, screenWidth * 0.85),
+                fontSize: 10,
+                padding: 6,
+                showMiniFlow: true,
+                miniFlow: {
+                    width: Math.min(200, screenWidth * 0.7),
+                    height: 90,
+                    nodeWidth: 50,
+                    nodeHeight: 18,
+                    fontSize: 8,
+                    letterSize: 10
+                }
+            };
+        } else if (screenWidth <= 768) {  // Tablet
+            return {
+                panelWidth: Math.min(320, screenWidth * 0.6),
+                fontSize: 11,
+                padding: 8,
+                showMiniFlow: true,
+                miniFlow: {
+                    width: Math.min(240, screenWidth * 0.5),
                     height: 100,
                     nodeWidth: 60,
                     nodeHeight: 20,
                     fontSize: 9,
                     letterSize: 12
-                },
-                ...heightObj
+                }
             };
-        } else if (effectiveWidth < 640) {
-            return {
-                panelWidth: 280 * scale,
-                fontSize: 12 * scale,
-                padding: 10 * scale,
-                showMiniFlow: true, // Changed to true
-                miniFlow: {
-                    width: 220,
-                    height: 100,
-                    nodeWidth: 65,
-                    nodeHeight: 22,
-                    fontSize: 10,
-                    letterSize: 13
-                },
-                ...heightObj
-            };
-        } else if (effectiveWidth < 700) {
-            return {
-                panelWidth: 300 * scale,
-                fontSize: 12.5 * scale,
-                padding: 11 * scale,
-                showMiniFlow: true,
-                miniFlow: {
-                    width: 240,
-                    height: 110,
-                    nodeWidth: 70,
-                    nodeHeight: 23,
-                    fontSize: 10,
-                    letterSize: 13
-                },
-                ...heightObj
-            };
-        } else if (effectiveWidth < 768) {
-            return {
-                panelWidth: 320 * scale,
-                fontSize: 13 * scale,
-                padding: 12 * scale,
-                showMiniFlow: true,
-                miniFlow: {
-                    width: 260,
-                    height: 120,
-                    nodeWidth: 75,
-                    nodeHeight: 25,
-                    fontSize: 11,
-                    letterSize: 14
-                },
-                ...heightObj
-            };
-        } else if (effectiveWidth < 1024) {
+        }
+
+        // Desktop sizes based on effective width
+        const effectiveWidth = width / scale;
+
+        if (effectiveWidth < 1024) {
             return {
                 panelWidth: 340 * scale,
                 fontSize: 13.5 * scale,
