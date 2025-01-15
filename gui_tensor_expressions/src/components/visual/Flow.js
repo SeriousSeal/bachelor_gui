@@ -229,7 +229,7 @@ const Flow = ({
    * @type {Object}
    */
   const [treeState, setTreeState] = useState({
-    connectedNodes: [],
+    connectedNodes: { value: [], left: null, right: null },
     panelPosition: { x: 0, y: 0 }
   });
 
@@ -300,12 +300,12 @@ const Flow = ({
    * @returns {Object|null} Connected node data or null if not found
    */
   const findConnectedNodes = useCallback((lookUpNode, node) => {
-    if (!lookUpNode) return null;
+    if (!lookUpNode) return { value: [], left: null, right: null };
     if (lookUpNode.id === node.id) {
       return {
-        value: lookUpNode.value,
-        ...{ left: lookUpNode.left },
-        ...{ right: lookUpNode.right }
+        value: lookUpNode.value || [],
+        left: lookUpNode.left ? { value: lookUpNode.left.value || [] } : null,
+        right: lookUpNode.right ? { value: lookUpNode.right.value || [] } : null
       };
     }
     const leftSearch = findConnectedNodes(lookUpNode.left, node);

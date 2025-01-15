@@ -211,6 +211,7 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
         };
         return [newItem, ...prevHistory.slice(0, 4)];
       });
+
     } catch (error) {
       console.error('Error updating tree:', error);
       Toast.show('Error updating indices');

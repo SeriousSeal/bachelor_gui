@@ -81,7 +81,6 @@ class DimensionClassifier {
         this.dimType = DimType.CB;
         const primitive = []
         this.leftK?.reverse().forEach(element => {
-            console.log(element);
             const inC = (this.dimTypes.primitive?.cb || []).includes(element) || (this.dimTypes.loop?.bc || []).includes(element);
             const inM = (this.dimTypes.primitive?.mb || []).includes(element) || (this.dimTypes.loop?.bm || []).includes(element);
             const inN = (this.dimTypes.primitive?.nb || []).includes(element) || (this.dimTypes.loop?.bn || []).includes(element);
@@ -103,7 +102,6 @@ class DimensionClassifier {
                 );
             }
         });
-        console.log(primitive);
         // Process remaining right indices
         this.dimType = DimType.CB;
         this.rightK?.reverse().forEach(element => {
@@ -118,7 +116,6 @@ class DimensionClassifier {
             }
 
             const occurrence = this.leftK.includes(element);
-            console.log(occurrence);
             if (occurrence) {
                 if (this.acceptDimForPrimitive(DimType.KB) && primitive.includes(element)) {
                     this.addToPrimitive(DimType.KB, element);
@@ -137,7 +134,6 @@ class DimensionClassifier {
                 );
             }
         });
-        console.log(this.dimTypes);
     }
 
     processLastIndices() {

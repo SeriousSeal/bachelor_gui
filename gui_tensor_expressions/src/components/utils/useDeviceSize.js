@@ -1,83 +1,92 @@
 import { useState, useEffect } from 'react';
 
 const useDeviceSize = () => {
-    const [dimensions, setDimensions] = useState({
-        width: window.innerWidth,
-        height: window.innerHeight,
-        isMobile: window.innerWidth <= 480,
-        isTablet: window.innerWidth > 480 && window.innerWidth <= 1024,
-        isDesktop: window.innerWidth > 1024
-    });
-
-    useEffect(() => {
-        const handleResize = () => {
-            const width = window.innerWidth;
-            setDimensions({
-                width,
-                height: window.innerHeight,
-                isMobile: width <= 480,
-                isTablet: width > 480 && width <= 1024,
-                isDesktop: width > 1024
-            });
+    const getEffectiveWidth = () => {
+        const dpr = window.devicePixelRatio || 1;
+        const effectiveWidth = window.innerWidth;
+        // Scale breakpoints based on DPR for high-res devices
+        const scaledBreakpoints = {
+            mobile: 480 * dpr,
+            tablet: 1024 * dpr
         };
 
+        return {
+            width: effectiveWidth,
+            isMobile: effectiveWidth <= scaledBreakpoints.mobile,
+            isTablet: effectiveWidth > scaledBreakpoints.mobile && effectiveWidth <= scaledBreakpoints.tablet,
+            isDesktop: effectiveWidth > scaledBreakpoints.tablet
+        };
+    };
+
+    const [dimensions, setDimensions] = useState(getEffectiveWidth());
+
+    useEffect(() => {
+        const handleResize = () => setDimensions(getEffectiveWidth());
         window.addEventListener('resize', handleResize);
-        return () => window.removeEventListener('resize', handleResize);
+        window.addEventListener('orientationchange', handleResize);
+        return () => {
+            window.removeEventListener('resize', handleResize);
+            window.removeEventListener('orientationchange', handleResize);
+        };
     }, []);
 
     const getInfoPanelDimensions = () => {
-        const { width, isMobile, isTablet } = dimensions;
+        const { width } = dimensions;
 
-        if (isMobile) {
-            const panelWidth = Math.min(280, width * 0.85);
+        // Base sizes on effective viewport width
+        const baseSize = Math.min(width, 1920); // Cap at 1920px
+        const relativeFactor = baseSize / 1920; // 1920 as reference width
+
+        if (dimensions.isMobile) {
+            const panelWidth = Math.min(280, width * 0.95);
             return {
                 panelWidth,
-                fontSize: 11,
-                padding: 8,
+                fontSize: Math.max(10, 11 * relativeFactor),
+                padding: Math.max(6, 8 * relativeFactor),
                 showMiniFlow: true,
                 miniFlow: {
-                    width: Math.min(160, panelWidth * 0.8), // Relative to panel width
-                    height: 100,
-                    nodeWidth: 100,
-                    nodeHeight: 16,
-                    fontSize: 10,
-                    letterSize: 11
+                    width: Math.min(160, panelWidth * 0.8),
+                    height: Math.max(80, 100 * relativeFactor),
+                    nodeWidth: Math.min(80, 100 * relativeFactor),
+                    nodeHeight: Math.max(14, 16 * relativeFactor),
+                    fontSize: Math.max(9, 10 * relativeFactor),
+                    letterSize: Math.max(10, 11 * relativeFactor)
                 }
             };
         }
 
-        if (isTablet) {
-            const panelWidth = Math.min(300, width * 0.4);
+        if (dimensions.isTablet) {
+            const panelWidth = Math.min(300, width * 0.5);
             return {
                 panelWidth,
-                fontSize: 12,
-                padding: 6,
+                fontSize: Math.max(11, 12 * relativeFactor),
+                padding: Math.max(5, 6 * relativeFactor),
                 showMiniFlow: true,
                 miniFlow: {
-                    width: Math.min(200, panelWidth * 0.8), // Relative to panel width
-                    height: 100,
-                    nodeWidth: 100,
-                    nodeHeight: 18,
-                    fontSize: 12,
-                    letterSize: 12
+                    width: Math.min(180, panelWidth * 0.8),
+                    height: Math.max(90, 100 * relativeFactor),
+                    nodeWidth: Math.min(90, 100 * relativeFactor),
+                    nodeHeight: Math.max(16, 18 * relativeFactor),
+                    fontSize: Math.max(11, 12 * relativeFactor),
+                    letterSize: Math.max(11, 12 * relativeFactor)
                 }
             };
         }
 
         // Desktop
-        const panelWidth = 360;
+        const panelWidth = Math.min(360, width * 0.3);
         return {
             panelWidth,
-            fontSize: 14,
-            padding: 10,
+            fontSize: Math.max(12, 14 * relativeFactor),
+            padding: Math.max(8, 10 * relativeFactor),
             showMiniFlow: true,
             miniFlow: {
-                width: Math.min(280, panelWidth * 0.8), // Relative to panel width
-                height: 140,
-                nodeWidth: 120,
-                nodeHeight: 35,
-                fontSize: 18,
-                letterSize: 20
+                width: Math.min(260, panelWidth * 0.8),
+                height: Math.max(120, 140 * relativeFactor),
+                nodeWidth: Math.min(100, 120 * relativeFactor),
+                nodeHeight: Math.max(30, 35 * relativeFactor),
+                fontSize: Math.max(16, 18 * relativeFactor),
+                letterSize: Math.max(18, 20 * relativeFactor)
             }
         };
     };

@@ -13,6 +13,8 @@ const NodeIndicesPanel = ({ indices, onSwapIndices, position, onMouseEnter, onMo
   // State Management
   const [draggedIndex, setDraggedIndex] = useState(null);
   const [dropIndex, setDropIndex] = useState(null);
+  const [touchedIndex, setTouchedIndex] = useState(null);
+  const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
 
   /**
    * Resets the drag and drop state
@@ -20,6 +22,8 @@ const NodeIndicesPanel = ({ indices, onSwapIndices, position, onMouseEnter, onMo
   const resetDragState = () => {
     setDraggedIndex(null);
     setDropIndex(null);
+    setTouchedIndex(null);
+    setDragPosition({ x: 0, y: 0 });
   };
 
   /**
@@ -78,6 +82,77 @@ const NodeIndicesPanel = ({ indices, onSwapIndices, position, onMouseEnter, onMo
   };
 
   /**
+   * Handles the start of a touch operation
+   * @param {Event} e - Touch start event
+   * @param {number} index - Index being touched
+   */
+  const handleTouchStart = (e, index) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const touch = e.touches[0];
+    setTouchedIndex(index);
+    setDragPosition({ x: touch.clientX, y: touch.clientY });
+    setDraggedIndex(index);
+  };
+
+  /**
+   * Handles moving during a touch operation
+   * @param {Event} e - Touch move event
+   */
+  const handleTouchMove = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (touchedIndex === null) return;
+
+    const touch = e.touches[0];
+    const currentElement = e.target;
+
+    // Find the closest element to drop on
+    const elements = document.elementsFromPoint(touch.clientX, touch.clientY);
+    const dropElement = elements.find(el =>
+      el.hasAttribute('data-index') &&
+      parseInt(el.getAttribute('data-index')) !== touchedIndex
+    );
+
+    if (dropElement) {
+      const newDropIndex = parseInt(dropElement.getAttribute('data-index'));
+      if (dropIndex !== newDropIndex) {
+        setDropIndex(newDropIndex);
+      }
+    }
+
+    // Visual feedback for the dragged element
+    currentElement.style.transform = `translate(${touch.clientX - dragPosition.x}px, ${touch.clientY - dragPosition.y}px)`;
+    currentElement.style.zIndex = '1000';
+  };
+
+  /**
+   * Handles the end of a touch operation
+   * @param {Event} e - Touch end event
+   */
+  const handleTouchEnd = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const currentElement = e.target;
+    currentElement.style.transform = '';
+    currentElement.style.zIndex = '';
+
+    if (touchedIndex !== null && dropIndex !== null) {
+      const newIndices = [...indices];
+      const [draggedValue] = newIndices.splice(touchedIndex, 1);
+      newIndices.splice(dropIndex, 0, draggedValue);
+      onSwapIndices(newIndices);
+    }
+
+    setTouchedIndex(null);
+    setDragPosition({ x: 0, y: 0 });
+    setDraggedIndex(null);
+    setDropIndex(null);
+  };
+
+  /**
    * Memoized preview of indices during drag operation
    */
   const previewIndices = useMemo(() => {
@@ -101,12 +176,14 @@ const NodeIndicesPanel = ({ indices, onSwapIndices, position, onMouseEnter, onMo
       onMouseLeave={onMouseLeave}
       onDragOver={handleDragOverContainer}
       onDrop={handleDrop}
+      onTouchMove={(e) => e.preventDefault()}
     >
       <div className="flex flex-col gap-2">
         <div className="flex gap-2 items-center relative min-w-[100px]">
           {indices.map((dim, idx) => (
             <div
               key={idx}
+              data-index={idx}
               draggable
               className={`px-2 py-1 rounded cursor-move select-none transition-all
                 ${draggedIndex === idx ? 'opacity-50 bg-gray-100' : 'bg-gray-100 hover:bg-gray-200'}
@@ -114,6 +191,15 @@ const NodeIndicesPanel = ({ indices, onSwapIndices, position, onMouseEnter, onMo
               onDragStart={(e) => handleDragStart(e, idx)}
               onDragOver={(e) => handleDragOver(e, idx)}
               onDragEnd={handleDragEnd}
+              onTouchStart={(e) => handleTouchStart(e, idx)}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+              onTouchCancel={handleTouchEnd}
+              style={{
+                position: 'relative',
+                touchAction: 'none',
+                transition: draggedIndex === idx ? 'none' : 'transform 0.2s'
+              }}
             >
               {dim}
             </div>

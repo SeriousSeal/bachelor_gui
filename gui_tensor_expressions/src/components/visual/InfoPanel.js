@@ -8,7 +8,7 @@ import { isEqual } from "lodash";
 
 const InfoPanel = ({
   node,
-  connectedNodes,
+  connectedNodes = { value: [], left: null, right: null },  // Add default value
   setConnectedNodes, // Add this prop
   onClose,
   initialPosition,
@@ -146,6 +146,11 @@ const InfoPanel = ({
 
 
   const handleMouseDown = (e) => {
+    // Don't initiate dragging if clicking the close button
+    if (e.target.closest('button[data-close-button]')) {
+      return;
+    }
+
     const event = e.touches ? e.touches[0] : e;
     if (panelRef.current?.contains(event.target)) {
       setIsDragging(true);
@@ -226,14 +231,24 @@ const InfoPanel = ({
 
     const updatedConnectedNodes = {
       ...connectedNodes,
-      id: node.id, // Add the root node's id
-      ...(nodeId === 'root' && { value: newIndices }),
-      ...(nodeId === 'left' && { left: { ...connectedNodes.left, value: newIndices } }),
-      ...(nodeId === 'right' && { right: { ...connectedNodes.right, value: newIndices } })
+      id: node.id,
+      value: nodeId === 'root' ? newIndices : connectedNodes.value,
+      left: nodeId === 'left'
+        ? { ...connectedNodes.left, value: newIndices }
+        : connectedNodes.left,
+      right: nodeId === 'right'
+        ? { ...connectedNodes.right, value: newIndices }
+        : connectedNodes.right
     };
 
-    setConnectedNodes(updatedConnectedNodes);
-    recalculateTreeAndOperations(updatedConnectedNodes);
+    setConnectedNodes(prevState => ({
+      ...prevState,
+      connectedNodes: updatedConnectedNodes
+    }));
+
+    if (recalculateTreeAndOperations) {
+      recalculateTreeAndOperations(updatedConnectedNodes);
+    }
   }, [connectedNodes, setConnectedNodes, recalculateTreeAndOperations, node.id]);
 
   const buttonContainerStyle = {
@@ -250,6 +265,23 @@ const InfoPanel = ({
     padding: `${dimensions.padding * 0.5}px ${dimensions.padding * 0.75}px`,
     whiteSpace: 'nowrap',
     minWidth: 'fit-content',
+  };
+
+  // Add this style object near your other style definitions
+  const closeButtonStyle = {
+    width: '36px', // Fixed width for better touch target
+    height: '36px', // Fixed height for better touch target (iOS minimum)
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    touchAction: 'manipulation',
+    padding: 0,
+    marginLeft: '8px',
+    borderRadius: '50%',
+    background: 'rgba(0, 0, 0, 0.05)',
+    position: 'relative',
+    minWidth: '36px', // Ensure minimum touch target size
+    minHeight: '36px', // Ensure minimum touch target size
   };
 
   return (
@@ -286,10 +318,30 @@ const InfoPanel = ({
             </label>
           </div>
           <button
-            className="ml-2 text-gray-500 hover:text-gray-700 text-xl font-bold leading-none"
-            onClick={(e) => { e.stopPropagation(); onClose(); }}
+            className="text-gray-500 hover:text-gray-700 hover:bg-gray-200 transition-colors"
+            style={closeButtonStyle}
+            data-close-button="true"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onClose();
+            }}
+            onTouchEnd={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onClose();
+            }}
           >
-            ×
+            <svg
+              viewBox="0 0 24 24"
+              width="24"
+              height="24"
+              stroke="currentColor"
+              strokeWidth="2"
+              fill="none"
+            >
+              <path d="M18 6L6 18M6 6l12 12" />
+            </svg>
           </button>
         </div>
       </div>

@@ -9,6 +9,9 @@ import ReactFlow, {
 import useDeviceSize from '../utils/useDeviceSize';
 import NodeIndicesPanel from './NodeIndicesPanel';
 
+// Add this at the top of the file after imports
+let activeNodeIndicesPanel = null;
+
 // --- Component Definitions ---
 /**
  * Custom node component for the flow diagram
@@ -19,6 +22,7 @@ const CustomNode = ({ data, id }) => {
   const nodeRef = useRef(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const timeoutRef = useRef(null);
+  const isTouchActiveRef = useRef(false);
 
   const clearTimeoutSafely = () => {
     if (timeoutRef.current) {
@@ -68,15 +72,70 @@ const CustomNode = ({ data, id }) => {
     }, 100);
   };
 
+  const handleTouchStart = (e) => {
+    if (data.forceCloseTooltip) return;
+    if (e.touches.length > 1) return;
+
+    // Close any other open panel before opening a new one
+    if (activeNodeIndicesPanel && activeNodeIndicesPanel !== id) {
+      activeNodeIndicesPanel = null;
+      setShowTooltip(false);
+      return;
+    }
+
+    isTouchActiveRef.current = true;
+    activeNodeIndicesPanel = id;
+    clearTimeoutSafely();
+    setShowTooltip(true);
+
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleTouchMove = (e) => {
+    // Prevent default touch behavior during tooltip interaction
+    if (showTooltip) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  };
+
+  const handleTouchEnd = (e) => {
+    if (!isTouchActiveRef.current) return;
+
+    // Don't close immediately on touch end
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleTouchCancel = (e) => {
+    isTouchActiveRef.current = false;
+    activeNodeIndicesPanel = null;
+    clearTimeoutSafely();
+    setShowTooltip(false);
+    e.preventDefault();
+  };
+
+  // Also add cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (activeNodeIndicesPanel === id) {
+        activeNodeIndicesPanel = null;
+      }
+    };
+  }, [id]);
+
   return (
     <div
       ref={nodeRef}
       className="relative w-full h-full bg-white rounded-md border border-gray-200"
       style={{ pointerEvents: 'all' }}
-      onMouseEnter={handleInteractionStart}
-      onMouseLeave={handleInteractionEnd}
-      onTouchStart={handleInteractionStart}
-      onTouchEnd={handleInteractionEnd}
+      onMouseEnter={() => !isTouchActiveRef.current && handleInteractionStart()}
+      onMouseLeave={() => !isTouchActiveRef.current && handleInteractionEnd()}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchCancel}
     >
       <div className="w-full h-full flex items-center justify-center p-1">
         <div dangerouslySetInnerHTML={{ __html: data.html }} />
