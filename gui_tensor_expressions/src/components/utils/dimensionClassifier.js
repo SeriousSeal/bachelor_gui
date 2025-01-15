@@ -80,7 +80,7 @@ class DimensionClassifier {
         // Process remaining left indices which are in K dimension
         this.dimType = DimType.CB;
         const primitive = []
-        this.leftK?.reverse().forEach(element => {
+        this.rightK?.reverse().forEach(element => {
             const inC = (this.dimTypes.primitive?.cb || []).includes(element) || (this.dimTypes.loop?.bc || []).includes(element);
             const inM = (this.dimTypes.primitive?.mb || []).includes(element) || (this.dimTypes.loop?.bm || []).includes(element);
             const inN = (this.dimTypes.primitive?.nb || []).includes(element) || (this.dimTypes.loop?.bn || []).includes(element);
@@ -89,7 +89,7 @@ class DimensionClassifier {
                 this.dimType = inC ? DimType.CB : inM ? DimType.MB : DimType.NB;
                 return;
             }
-            const occurrence = this.rightK.includes(element);
+            const occurrence = this.leftK.includes(element);
             if (occurrence) {
                 if (this.acceptDimForPrimitive(DimType.KB)) {
                     primitive.push(element);
@@ -102,9 +102,10 @@ class DimensionClassifier {
                 );
             }
         });
+        console.log('primitive', primitive);
         // Process remaining right indices
         this.dimType = DimType.CB;
-        this.rightK?.reverse().forEach(element => {
+        this.leftK?.reverse().forEach(element => {
             const inC = (this.dimTypes.primitive?.cb || []).includes(element) || (this.dimTypes.loop?.bc || []).includes(element);
             const inM = (this.dimTypes.primitive?.mb || []).includes(element) || (this.dimTypes.loop?.bm || []).includes(element);
             const inN = (this.dimTypes.primitive?.nb || []).includes(element) || (this.dimTypes.loop?.bn || []).includes(element);
@@ -115,9 +116,9 @@ class DimensionClassifier {
                 return;
             }
 
-            const occurrence = this.leftK.includes(element);
+            const occurrence = this.rightK.includes(element);
             if (occurrence) {
-                if (this.acceptDimForPrimitive(DimType.KB) && primitive.includes(element)) {
+                if (this.acceptDimForPrimitive(DimType.KB) && primitive.includes(element) && primitive[0] === element) {
                     this.addToPrimitive(DimType.KB, element);
                     const index = primitive.indexOf(element);
                     if (index > -1) {
