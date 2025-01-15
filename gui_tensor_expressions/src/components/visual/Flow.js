@@ -198,7 +198,7 @@ const Flow = ({
    * @property {Object|null} selectedNode - Currently selected node
    * @property {boolean} showPanel - Controls panel visibility
    * @property {boolean} showOperations - Controls operation percentage visibility
-   * @property {boolean} showSizes - Controls size visibility
+   * @property {boolean} showSizes - Controls sizes visibility
    * @property {boolean} hoverEnabled - Controls hover functionality
    * @property {boolean} highlightMode - Controls highlight mode
    */

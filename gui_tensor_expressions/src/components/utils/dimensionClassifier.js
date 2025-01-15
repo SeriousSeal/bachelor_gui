@@ -55,7 +55,10 @@ class DimensionClassifier {
             this.processLastIndices();
 
             // Second pass: Process remaining indices
-            this.processRemainingIndices();
+            this.processK();
+
+            // Reverse all arrays
+            this.reverseAllArrays();
         } catch (error) {
             console.error(error.message);
             Toast.show(error.message);
@@ -65,13 +68,20 @@ class DimensionClassifier {
         return this.dimTypes;
     }
 
+    reverseAllArrays() {
+        // Reverse primitive arrays
+        Object.values(this.dimTypes.primitive).forEach(arr => arr.reverse());
+        // Reverse loop arrays
+        Object.values(this.dimTypes.loop).forEach(arr => arr.reverse());
+    }
 
-    processRemainingIndices() {
+    processK() {
 
         // Process remaining left indices which are in K dimension
         this.dimType = DimType.CB;
         const primitive = []
         this.leftK?.reverse().forEach(element => {
+            console.log(element);
             const inC = (this.dimTypes.primitive?.cb || []).includes(element) || (this.dimTypes.loop?.bc || []).includes(element);
             const inM = (this.dimTypes.primitive?.mb || []).includes(element) || (this.dimTypes.loop?.bm || []).includes(element);
             const inN = (this.dimTypes.primitive?.nb || []).includes(element) || (this.dimTypes.loop?.bn || []).includes(element);
@@ -93,7 +103,7 @@ class DimensionClassifier {
                 );
             }
         });
-
+        console.log(primitive);
         // Process remaining right indices
         this.dimType = DimType.CB;
         this.rightK?.reverse().forEach(element => {
@@ -108,11 +118,14 @@ class DimensionClassifier {
             }
 
             const occurrence = this.leftK.includes(element);
-
+            console.log(occurrence);
             if (occurrence) {
                 if (this.acceptDimForPrimitive(DimType.KB) && primitive.includes(element)) {
                     this.addToPrimitive(DimType.KB, element);
-                    primitive.pop(element);
+                    const index = primitive.indexOf(element);
+                    if (index > -1) {
+                        primitive.splice(index, 1);
+                    }
                 } else {
                     this.addToLoop(DimType.BK, element);
                 }
@@ -124,6 +137,7 @@ class DimensionClassifier {
                 );
             }
         });
+        console.log(this.dimTypes);
     }
 
     processLastIndices() {
