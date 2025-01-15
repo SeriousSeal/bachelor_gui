@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import MiniReactFlowTree from './MiniReactFlowTree';
 import { dimensionTypes } from '../utils/dimensionClassifier';
-import { useResponsive } from '../utils/responsiveContext';
 import { TbArrowsExchange, TbArrowsShuffle } from "react-icons/tb";  // Add TbArrowsShuffle import
+import useDeviceSize from '../utils/useDeviceSize';
 
 import { isEqual } from "lodash";
 
@@ -20,7 +20,8 @@ const InfoPanel = ({
   addPermutationNode,  // Add this prop
   removePermutationNode  // Add this prop
 }) => {
-  const { panelWidth, padding, miniFlow, showMiniFlow } = useResponsive();
+  const { getInfoPanelDimensions } = useDeviceSize();
+  const dimensions = getInfoPanelDimensions();
   const [position, setPosition] = useState(initialPosition);
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
@@ -52,20 +53,26 @@ const InfoPanel = ({
     top: `${position.y}px`,
     left: `${position.x}px`,
     zIndex: 10,
-    width: `${panelWidth}px`,
+    width: `${dimensions.panelWidth}px`,
+    maxWidth: '95vw',
+    fontSize: `${dimensions.fontSize}px`,
+    padding: `${dimensions.padding}px`,
     cursor: isDragging ? 'grabbing' : 'grab',
     userSelect: 'none',
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
     backdropFilter: 'blur(5px)',
-    padding: `${padding}px`,
     display: 'flex',
     flexDirection: 'column',
     borderRadius: '8px',
     boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+    overflow: 'hidden', // Add this to prevent content overflow
   };
 
   const titleStyle = {
-    fontSize: '20px', fontWeight: 'bold', marginBottom: '12px', color: '#333',
+    fontSize: `${dimensions.fontSize * 1.4}px`,
+    fontWeight: 'bold',
+    marginBottom: `${dimensions.padding}px`,
+    color: '#333',
     alignItems: "center",
   };
 
@@ -80,39 +87,40 @@ const InfoPanel = ({
   };
 
   const letterStyle = {
-    fontSize: `${miniFlow.letterSize}px`,
+    fontSize: `${dimensions.miniFlow.letterSize}px`,
     fontWeight: 'bold',
     lineHeight: '1.2',
-    marginBottom: '20px',
+    marginBottom: `${dimensions.padding}px`,
   };
 
   const reactFlowPanelStyle = {
     display: "flex",
     alignItems: "flex-start",
     justifyContent: "center",
-    marginBottom: '8px',
-    maxWidth: `${miniFlow.width}px`,
+    marginBottom: `${dimensions.padding}px`,
+    width: '100%', // Changed from maxWidth
     margin: '0 auto',
-    paddingTop: '16px', // Increased padding
-    position: 'relative', // Added position relative
-    overflow: 'visible' // Added overflow visible
+    paddingTop: `${dimensions.padding}px`,
+    position: 'relative',
+    overflow: 'hidden' // Changed from visible
   };
 
   const tableStyle = {
     width: '100%',
     borderCollapse: 'separate',
     borderSpacing: '0',
-    marginTop: '8px',
+    marginTop: `${dimensions.padding}px`,
     backgroundColor: 'white',
     borderRadius: '8px',
     overflow: 'hidden',
+    fontSize: `${dimensions.fontSize}px`,
   };
 
   const cellStyle = {
-    padding: '10px',
+    padding: `${dimensions.padding * 0.75}px`,
     textAlign: 'center',
     borderBottom: '1px solid #e0e0e0',
-    height: '42px',
+    height: `${dimensions.fontSize * 2.5}px`,
     position: 'relative',
   };
 
@@ -138,11 +146,12 @@ const InfoPanel = ({
 
 
   const handleMouseDown = (e) => {
-    if (e.target === panelRef.current || panelRef.current.contains(e.target)) {
+    const event = e.touches ? e.touches[0] : e;
+    if (panelRef.current?.contains(event.target)) {
       setIsDragging(true);
       setDragOffset({
-        x: e.clientX - position.x,
-        y: e.clientY - position.y,
+        x: event.clientX - position.x,
+        y: event.clientY - position.y,
       });
     }
   };
@@ -156,6 +165,17 @@ const InfoPanel = ({
     }
   }, [isDragging, dragOffset]);
 
+  const handleTouchMove = useCallback((e) => {
+    if (isDragging) {
+      e.preventDefault(); // Prevent scrolling while dragging
+      const touch = e.touches[0];
+      setPosition({
+        x: touch.clientX - dragOffset.x,
+        y: touch.clientY - dragOffset.y,
+      });
+    }
+  }, [isDragging, dragOffset]);
+
   const handleMouseUp = () => {
     setIsDragging(false);
   };
@@ -164,15 +184,21 @@ const InfoPanel = ({
     if (isDragging) {
       window.addEventListener('mousemove', handleMouseMove);
       window.addEventListener('mouseup', handleMouseUp);
+      window.addEventListener('touchmove', handleTouchMove, { passive: false });
+      window.addEventListener('touchend', handleMouseUp);
     } else {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleMouseUp);
     }
     return () => {
       window.removeEventListener('mousemove', handleMouseMove);
       window.removeEventListener('mouseup', handleMouseUp);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleMouseUp);
     };
-  }, [isDragging, handleMouseMove]);
+  }, [isDragging, handleMouseMove, handleTouchMove]);
 
 
   const handleSwap = useCallback(async (e) => {
@@ -210,16 +236,65 @@ const InfoPanel = ({
     recalculateTreeAndOperations(updatedConnectedNodes);
   }, [connectedNodes, setConnectedNodes, recalculateTreeAndOperations, node.id]);
 
+  const buttonContainerStyle = {
+    display: 'flex',
+    justifyContent: 'center',
+    flexWrap: 'wrap', // Allow buttons to wrap
+    gap: `${dimensions.padding / 2}px`,
+    width: '100%',
+    padding: `${dimensions.padding / 2}px`,
+  };
+
+  const buttonStyle = {
+    fontSize: `${dimensions.fontSize * 0.95}px`,
+    padding: `${dimensions.padding * 0.5}px ${dimensions.padding * 0.75}px`,
+    whiteSpace: 'nowrap',
+    minWidth: 'fit-content',
+  };
+
   return (
     <div
       ref={panelRef}
       className="border border-gray-300 rounded shadow-md relative"
       style={panelStyle}
       onMouseDown={handleMouseDown}
+      onTouchStart={handleMouseDown}  // Add touch support
     >
-      <h3 style={titleStyle}>Contraction Info</h3>
+      {/* Add a header container div to group title and controls */}
+      <div className="flex items-center justify-between mb-2">
+        <h3 style={titleStyle}>Contraction Info</h3>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2">
+            <label className="text-xs text-gray-500">
+              {showSizes ? "Sizes" : "Indices"}
+            </label>
+            <label className="relative inline-block w-8 h-4">
+              <input
+                type="checkbox"
+                className="hidden"
+                checked={showSizes}
+                onChange={onToggleSizes}
+              />
+              <span className="absolute cursor-pointer inset-0 rounded-full transition-colors duration-200 ease-in-out bg-gray-300">
+                <span className={`
+                  absolute h-3 w-3 rounded-full bg-white
+                  transform transition-transform duration-200 ease-in-out
+                  top-0.5 left-0.5
+                  ${showSizes ? 'translate-x-4' : 'translate-x-0'}
+                `} />
+              </span>
+            </label>
+          </div>
+          <button
+            className="ml-2 text-gray-500 hover:text-gray-700 text-xl font-bold leading-none"
+            onClick={(e) => { e.stopPropagation(); onClose(); }}
+          >
+            ×
+          </button>
+        </div>
+      </div>
 
-      {showMiniFlow && (
+      {true && (  // Replace showMiniFlow with true
         <div style={reactFlowPanelStyle}>
           <div style={letterContainerStyle}>
             <span style={{ ...letterStyle, color: '#a6cee3' }}>C</span>
@@ -239,35 +314,38 @@ const InfoPanel = ({
                 isDragging={isDragging}  // Add this prop
               />
             </div>
-            <div className="flex justify-center gap-2 mx-auto mb-2">
+            <div style={buttonContainerStyle}>
               {node.data.left && node.data.right && (
                 <button
-                  className="flex items-center justify-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-md text-sm text-gray-700 transition-colors duration-200"
+                  className="flex items-center justify-center gap-1 bg-gray-100 hover:bg-gray-200 rounded-md text-gray-700 transition-colors duration-200"
+                  style={buttonStyle}
                   onClick={handleSwap}
                   title="Swap Left and Right Children"
                 >
-                  <TbArrowsExchange size={16} />
-                  Swap Children
+                  <TbArrowsExchange size={dimensions.fontSize} />
+                  <span>Swap</span>
                 </button>
               )}
               {!node.data.deleteAble && (
                 <button
-                  className="flex items-center justify-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-md text-sm text-gray-700 transition-colors duration-200"
+                  className="flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 rounded-md text-gray-700 transition-colors duration-200"
+                  style={buttonStyle}
                   onClick={handleAddPermutation}
                   title="Add Permutation Node"
                 >
-                  <TbArrowsShuffle size={16} />
-                  Add Permutation
+                  <TbArrowsShuffle size={dimensions.fontSize} />
+                  <span>Add Permutation</span>
                 </button>
               )}
               {node.data.deleteAble && (
                 <button
-                  className="flex items-center justify-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-md text-sm text-gray-700 transition-colors duration-200"
+                  className="flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 rounded-md text-gray-700 transition-colors duration-200"
+                  style={buttonStyle}
                   onClick={handleRemovePermutation}
                   title="Remove Permutation Node"
                 >
-                  <TbArrowsShuffle size={16} />
-                  Remove Permutation
+                  <TbArrowsShuffle size={dimensions.fontSize} />
+                  <span>Remove Permutation</span>
                 </button>
               )}
             </div>
@@ -276,7 +354,7 @@ const InfoPanel = ({
       )}
 
       {!isEmptyDimTypes && (
-        <div className={`w-full overflow-x-auto ${!showMiniFlow ? 'mt-0' : 'mt-4'}`}>
+        <div className={`w-full overflow-x-auto  'mt-4'}`}>
           <table style={tableStyle}>
             <thead>
               <tr>
@@ -352,38 +430,6 @@ const InfoPanel = ({
           </table>
         </div>
       )}
-
-      <div className="absolute top-3.75 right-8 flex items-center gap-2">
-        <label className="text-xs text-gray-500">
-          {showSizes ? "Sizes" : "Indices"}
-        </label>
-        <label className="relative inline-block w-8 h-4">
-          <input
-            type="checkbox"
-            className="hidden"
-            checked={showSizes}
-            onChange={onToggleSizes}
-          />
-          <span className={`
-            absolute cursor-pointer inset-0 rounded-full
-            transition-colors duration-200 ease-in-out bg-gray-300
-          `}>
-            <span className={`
-              absolute h-3 w-3 rounded-full bg-white
-              transform transition-transform duration-200 ease-in-out
-              top-0.5 left-0.5
-              ${showSizes ? 'translate-x-4' : 'translate-x-0'}
-            `} />
-          </span>
-        </label>
-      </div>
-
-      <button
-        className="absolute top-2 right-2 text-gray-500 hover:text-gray-700 text-xl font-bold"
-        onClick={(e) => { e.stopPropagation(); onClose(); }}
-      >
-        ×
-      </button>
     </div>
   );
 };

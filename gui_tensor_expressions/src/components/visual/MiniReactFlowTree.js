@@ -6,7 +6,7 @@ import ReactFlow, {
   Position,
   ReactFlowProvider
 } from 'reactflow';
-import { useResponsive } from '../utils/responsiveContext';
+import useDeviceSize from '../utils/useDeviceSize';
 import NodeIndicesPanel from './NodeIndicesPanel';
 
 // --- Component Definitions ---
@@ -55,13 +55,13 @@ const CustomNode = ({ data, id }) => {
     }
   };
 
-  const handleMouseEnter = () => {
-    if (data.forceCloseTooltip) return; // Don't show tooltip if panel is being dragged
+  const handleInteractionStart = () => {
+    if (data.forceCloseTooltip) return;
     clearTimeoutSafely();
     setShowTooltip(true);
   };
 
-  const handleMouseLeave = () => {
+  const handleInteractionEnd = () => {
     clearTimeoutSafely();
     timeoutRef.current = setTimeout(() => {
       setShowTooltip(false);
@@ -73,8 +73,10 @@ const CustomNode = ({ data, id }) => {
       ref={nodeRef}
       className="relative w-full h-full bg-white rounded-md border border-gray-200"
       style={{ pointerEvents: 'all' }}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
+      onMouseEnter={handleInteractionStart}
+      onMouseLeave={handleInteractionEnd}
+      onTouchStart={handleInteractionStart}
+      onTouchEnd={handleInteractionEnd}
     >
       <div className="w-full h-full flex items-center justify-center p-1">
         <div dangerouslySetInnerHTML={{ __html: data.html }} />
@@ -84,8 +86,8 @@ const CustomNode = ({ data, id }) => {
           indices={data.indices}
           onSwapIndices={handleSwapIndices}
           position={tooltipPosition}
-          onMouseEnter={handleMouseEnter}
-          onMouseLeave={handleMouseLeave}
+          onMouseEnter={handleInteractionStart}
+          onMouseLeave={handleInteractionEnd}
         />,
         document.body
       )}
@@ -111,7 +113,9 @@ const nodeTypes = {
  * @param {boolean} props.isDragging Indicates if parent is being dragged
  */
 const MiniReactFlowTree = ({ node, left, right, dimTypes, onIndicesChange, isDragging }) => {
-  const { miniFlow } = useResponsive();
+  const { getInfoPanelDimensions } = useDeviceSize();
+  const dimensions = getInfoPanelDimensions();
+  const miniFlow = dimensions.miniFlow;
 
   /**
    * Determines the dimension type of a given letter based on dimTypes configuration
@@ -241,15 +245,16 @@ const MiniReactFlowTree = ({ node, left, right, dimTypes, onIndicesChange, isDra
    * Generates node configurations for the flow diagram
    */
   const nodes = useMemo(() => {
+    // Adjust nodes positioning to better fit the container
     const centerX = miniFlow.width / 2;
     const rootX = centerX - (miniFlow.nodeWidth / 2);
-    const verticalSpacing = miniFlow.height * 0.6;
-    const horizontalSpacing = miniFlow.width * 0.3;
+    const verticalSpacing = miniFlow.height * 0.5; // Reduced from 0.6
+    const horizontalSpacing = miniFlow.width * 0.25; // Reduced from 0.3
 
     const baseNodes = [
       createNodeData('root', {
         x: rootX,
-        y: 0
+        y: miniFlow.height * 0.1
       }),
       createNodeData('left', {
         x: centerX - (right ? horizontalSpacing : 0) - (miniFlow.nodeWidth / 2),
@@ -300,46 +305,32 @@ const MiniReactFlowTree = ({ node, left, right, dimTypes, onIndicesChange, isDra
         width: `${miniFlow.width}px`,
         height: `${miniFlow.height}px`,
         position: 'relative',
-        overflow: 'visible',
+        overflow: 'hidden',
+        transform: 'scale(0.9)',
+        transformOrigin: 'center center',
       }}>
-        {/* Add background wrapper div */}
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: 'white',
-          zIndex: 0,
-        }} />
-        <div style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          zIndex: 1,
-        }}>
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            fitView
-            fitViewOptions={{ padding: 0.1 }}
-            proOptions={{ hideAttribution: true }}
-            nodeTypes={nodeTypes}
-            zoomOnScroll={false}
-            panOnScroll={false}
-            nodesDraggable={false}
-            nodesConnectable={false}
-            elementsSelectable={false}
-            draggable={false}
-            panOnDrag={false}
-            minZoom={1}
-            maxZoom={1}
-          >
-
-          </ReactFlow>
-        </div>
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          fitView
+          fitViewOptions={{
+            padding: 0.1,
+            minZoom: 0.1,
+            maxZoom: 1,
+          }}
+          proOptions={{ hideAttribution: true }}
+          nodeTypes={nodeTypes}
+          zoomOnScroll={false}
+          panOnScroll={false}
+          nodesDraggable={false}
+          nodesConnectable={false}
+          elementsSelectable={false}
+          draggable={false}
+          panOnDrag={false}
+          minZoom={1}
+          maxZoom={1}
+        >
+        </ReactFlow>
       </div>
     </ReactFlowProvider>
   );

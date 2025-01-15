@@ -10,7 +10,6 @@ import 'reactflow/dist/style.css';
  * Component Imports
  */
 import InfoPanel from './InfoPanel';
-import { ResponsiveProvider } from '../utils/responsiveContext';
 import { Toast } from '../common/Toast';
 
 /**
@@ -634,136 +633,134 @@ const Flow = ({
   const activeNode = uiState.selectedNode || uiState.hoveredNode;
 
   return (
-    <ResponsiveProvider>
-      <div style={{ width: '100%', height: '100%' }}>
-        <ReactFlow
-          ref={refs.flow}
-          nodes={augmentedNodes}
-          edges={augmentedEdges}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          nodeTypes={NODE_TYPES}
-          fitView
-          fitViewOptions={{ padding: 0.2 }}
-          minZoom={0.1}
-          maxZoom={4}
-          style={{ width: '100%', height: '100%' }}
-          onNodeClick={handleNodeClick}
-          onNodeMouseEnter={handleNodeMouseEnter}
-          onNodeMouseLeave={handleNodeMouseLeave}
-          nodesDraggable={false}
-          proOptions={{ hideAttribution: true }}
-        >
-          <Controls>
+    <div style={{ width: '100%', height: '100%' }}>
+      <ReactFlow
+        ref={refs.flow}
+        nodes={augmentedNodes}
+        edges={augmentedEdges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onConnect={onConnect}
+        nodeTypes={NODE_TYPES}
+        fitView
+        fitViewOptions={{ padding: 0.2 }}
+        minZoom={0.1}
+        maxZoom={4}
+        style={{ width: '100%', height: '100%' }}
+        onNodeClick={handleNodeClick}
+        onNodeMouseEnter={handleNodeMouseEnter}
+        onNodeMouseLeave={handleNodeMouseLeave}
+        nodesDraggable={false}
+        proOptions={{ hideAttribution: true }}
+      >
+        <Controls>
+          <ControlButton
+            onClick={handleControlButtonClick}
+            title="Change Layout Options"
+          >
+            <TbLayoutDistributeHorizontal />
+          </ControlButton>
+          <ControlButton
+            onClick={toggleHoverBehavior}
+            className={`hover - toggle ${uiState.hoverEnabled ? 'active' : ''} `}
+            title={uiState.hoverEnabled ? 'Disable Hover' : 'Enable Hover'}
+          >
+            {uiState.hoverEnabled ? <TbEyeCheck /> : <TbEyeCancel />}
+          </ControlButton>
+          <ControlButton
+            onClick={toggleOperations}
+            className={`operations - toggle ${uiState.showOperations ? 'active' : ''} `}
+            title={uiState.showOperations ? 'Hide Operation Percentages' : 'Show Operation Percentages'}
+          >
+            <TbPercentage />
+          </ControlButton>
+          <ControlButton
+            onClick={toggleHighlightMode}
+            className={`highlight-mode ${uiState.highlightMode ? 'active' : ''}`}
+            title={uiState.highlightMode ? 'Exit Highlight Mode' : 'Enter Highlight Mode'}
+          >
+            <TbHighlight />
+          </ControlButton>
+          {uiState.highlightMode && (
             <ControlButton
-              onClick={handleControlButtonClick}
-              title="Change Layout Options"
+              onClick={handleCreateHighlightShare}
+              title="Create Share URL from Highlighted Nodes"
             >
-              <TbLayoutDistributeHorizontal />
+              <TbCheck />
             </ControlButton>
-            <ControlButton
-              onClick={toggleHoverBehavior}
-              className={`hover - toggle ${uiState.hoverEnabled ? 'active' : ''} `}
-              title={uiState.hoverEnabled ? 'Disable Hover' : 'Enable Hover'}
-            >
-              {uiState.hoverEnabled ? <TbEyeCheck /> : <TbEyeCancel />}
-            </ControlButton>
-            <ControlButton
-              onClick={toggleOperations}
-              className={`operations - toggle ${uiState.showOperations ? 'active' : ''} `}
-              title={uiState.showOperations ? 'Hide Operation Percentages' : 'Show Operation Percentages'}
-            >
-              <TbPercentage />
-            </ControlButton>
-            <ControlButton
-              onClick={toggleHighlightMode}
-              className={`highlight-mode ${uiState.highlightMode ? 'active' : ''}`}
-              title={uiState.highlightMode ? 'Exit Highlight Mode' : 'Enter Highlight Mode'}
-            >
-              <TbHighlight />
-            </ControlButton>
-            {uiState.highlightMode && (
-              <ControlButton
-                onClick={handleCreateHighlightShare}
-                title="Create Share URL from Highlighted Nodes"
-              >
-                <TbCheck />
-              </ControlButton>
-            )}
-          </Controls>
-          <Background variant="dots" gap={12} size={1} />
-          {!uiState.highlightMode && activeNode && (
-            <div
-              onMouseEnter={handlePanelMouseEnter}
-              onMouseLeave={handlePanelMouseLeave}
-            >
-              <InfoPanel
-                key={`${treeState.connectedNodes.value}-${treeState.connectedNodes.left?.value}-${treeState.connectedNodes.right?.value}`}
-                node={activeNode ?? uiState.hoveredNode}
-                connectedNodes={treeState.connectedNodes}
-                setConnectedNodes={setTreeState}
-                onClose={() => {
-                  setUiState(prevState => ({ ...prevState, selectedNode: null, hoveredNode: null }));
-                  setTreeState(prevState => ({ ...prevState, connectedNodes: [] }));
-                }}
-                initialPosition={{ x: 12, y: 8 }}
-                indexSizes={indexSizes}
-                showSizes={uiState.showSizes}
-                onToggleSizes={handleToggleSizes}
-                swapChildren={handleSwapChildren}
-                recalculateTreeAndOperations={recalculateTreeAndOperations}
-                addPermutationNode={addPermutationNode}
-                removePermutationNode={removePermutationNode}
-              />
-            </div>
           )}
-          {uiState.showPanel && createPortal(
-            <div
-              ref={refs.panel}
-              className="fixed bg-white border border-gray-200 p-3 w-48 shadow-md rounded-md z-50 text-sm"
-              style={{
-                left: treeState.panelPosition.x,
-                top: treeState.panelPosition.y
+        </Controls>
+        <Background variant="dots" gap={12} size={1} />
+        {!uiState.highlightMode && activeNode && (
+          <div
+            onMouseEnter={handlePanelMouseEnter}
+            onMouseLeave={handlePanelMouseLeave}
+          >
+            <InfoPanel
+              key={`${treeState.connectedNodes.value}-${treeState.connectedNodes.left?.value}-${treeState.connectedNodes.right?.value}`}
+              node={activeNode ?? uiState.hoveredNode}
+              connectedNodes={treeState.connectedNodes}
+              setConnectedNodes={setTreeState}
+              onClose={() => {
+                setUiState(prevState => ({ ...prevState, selectedNode: null, hoveredNode: null }));
+                setTreeState(prevState => ({ ...prevState, connectedNodes: [] }));
               }}
-            >
-              <h3 className="text-base font-medium mb-1">Choose a layout:</h3>
-              {Object.values(LayoutOptionType).map(option => (
-                <div
-                  key={option}
-                  className="cursor-pointer hover:bg-gray-100 rounded p-1.5 text-sm"
-                  onClick={() => {
-                    handleOptionClickFlow(option);
-                  }}
-                >
-                  {`${option} `}
-                </div>
-              ))}
-            </div>,
-            document.body
-          )}
-          <Panel position="bottom-right" className="bg-white shadow-md rounded-md p-2">
-            <div className="flex items-center gap-2">
-              <input
-                type="text"
-                value={searchState.searchIndices}
-                onChange={(e) => handleSearch(e.target.value)}
-                placeholder="Search indices (e.g. 1,2,3)"
-                className="p-1 border border-gray-300 rounded text-sm w-48"
-              />
-              {searchState.searchIndices && (
-                <button
-                  onClick={() => handleSearch('')}
-                  className="text-gray-500 hover:text-gray-700"
-                >
-                  ×
-                </button>
-              )}
-            </div>
-          </Panel>
-        </ReactFlow>
-      </div>
-    </ResponsiveProvider>
+              initialPosition={{ x: 12, y: 8 }}
+              indexSizes={indexSizes}
+              showSizes={uiState.showSizes}
+              onToggleSizes={handleToggleSizes}
+              swapChildren={handleSwapChildren}
+              recalculateTreeAndOperations={recalculateTreeAndOperations}
+              addPermutationNode={addPermutationNode}
+              removePermutationNode={removePermutationNode}
+            />
+          </div>
+        )}
+        {uiState.showPanel && createPortal(
+          <div
+            ref={refs.panel}
+            className="fixed bg-white border border-gray-200 p-3 w-48 shadow-md rounded-md z-50 text-sm"
+            style={{
+              left: treeState.panelPosition.x,
+              top: treeState.panelPosition.y
+            }}
+          >
+            <h3 className="text-base font-medium mb-1">Choose a layout:</h3>
+            {Object.values(LayoutOptionType).map(option => (
+              <div
+                key={option}
+                className="cursor-pointer hover:bg-gray-100 rounded p-1.5 text-sm"
+                onClick={() => {
+                  handleOptionClickFlow(option);
+                }}
+              >
+                {`${option} `}
+              </div>
+            ))}
+          </div>,
+          document.body
+        )}
+        <Panel position="bottom-right" className="bg-white shadow-md rounded-md p-2">
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={searchState.searchIndices}
+              onChange={(e) => handleSearch(e.target.value)}
+              placeholder="Search indices (e.g. 1,2,3)"
+              className="p-1 border border-gray-300 rounded text-sm w-48"
+            />
+            {searchState.searchIndices && (
+              <button
+                onClick={() => handleSearch('')}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                ×
+              </button>
+            )}
+          </div>
+        </Panel>
+      </ReactFlow>
+    </div>
   );
 };
 
