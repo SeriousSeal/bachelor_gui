@@ -41,16 +41,16 @@ const useDeviceSize = () => {
             const panelWidth = Math.min(280, width * 0.95);
             return {
                 panelWidth,
-                fontSize: Math.max(10, 11 * relativeFactor),
-                padding: Math.max(6, 8 * relativeFactor),
+                fontSize: Math.max(12, 12 * relativeFactor),
+                padding: Math.max(8, 10 * relativeFactor),
                 showMiniFlow: true,
                 miniFlow: {
-                    width: Math.min(160, panelWidth * 0.8),
-                    height: Math.max(80, 100 * relativeFactor),
-                    nodeWidth: Math.min(80, 100 * relativeFactor),
-                    nodeHeight: Math.max(14, 16 * relativeFactor),
-                    fontSize: Math.max(9, 10 * relativeFactor),
-                    letterSize: Math.max(10, 11 * relativeFactor)
+                    width: Math.min(200, panelWidth * 0.9),
+                    height: Math.max(100, 120 * relativeFactor),
+                    nodeWidth: Math.min(100, 120 * relativeFactor),
+                    nodeHeight: Math.max(20, 24 * relativeFactor),
+                    fontSize: Math.max(11, 12 * relativeFactor),
+                    letterSize: Math.max(12, 14 * relativeFactor)
                 }
             };
         }
@@ -59,16 +59,16 @@ const useDeviceSize = () => {
             const panelWidth = Math.min(300, width * 0.5);
             return {
                 panelWidth,
-                fontSize: Math.max(11, 12 * relativeFactor),
-                padding: Math.max(5, 6 * relativeFactor),
+                fontSize: Math.max(12, 12 * relativeFactor),
+                padding: Math.max(8, 10 * relativeFactor),
                 showMiniFlow: true,
                 miniFlow: {
-                    width: Math.min(180, panelWidth * 0.8),
-                    height: Math.max(90, 100 * relativeFactor),
-                    nodeWidth: Math.min(90, 100 * relativeFactor),
-                    nodeHeight: Math.max(16, 18 * relativeFactor),
+                    width: 250,
+                    height: 100,
+                    nodeWidth: 70,
+                    nodeHeight: Math.max(20, 24 * relativeFactor),
                     fontSize: Math.max(11, 12 * relativeFactor),
-                    letterSize: Math.max(11, 12 * relativeFactor)
+                    letterSize: Math.max(12, 14 * relativeFactor)
                 }
             };
         }

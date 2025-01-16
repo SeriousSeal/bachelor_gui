@@ -110,16 +110,16 @@ const NodeIndicesPanel = ({ indices, onSwapIndices, position, onMouseEnter, onMo
 
     // Find the closest element to drop on
     const elements = document.elementsFromPoint(touch.clientX, touch.clientY);
-    const dropElement = elements.find(el =>
-      el.hasAttribute('data-index') &&
-      parseInt(el.getAttribute('data-index')) !== touchedIndex
-    );
+    const dropElement = elements.find(el => el.hasAttribute('data-index'));
 
     if (dropElement) {
       const newDropIndex = parseInt(dropElement.getAttribute('data-index'));
       if (dropIndex !== newDropIndex) {
         setDropIndex(newDropIndex);
       }
+    } else {
+      // Reset drop index if not over any valid target
+      setDropIndex(null);
     }
 
     // Visual feedback for the dragged element
@@ -143,13 +143,14 @@ const NodeIndicesPanel = ({ indices, onSwapIndices, position, onMouseEnter, onMo
       const newIndices = [...indices];
       const [draggedValue] = newIndices.splice(touchedIndex, 1);
       newIndices.splice(dropIndex, 0, draggedValue);
-      onSwapIndices(newIndices);
+
+      // Only update if the order actually changed
+      if (indices.join(',') !== newIndices.join(',')) {
+        onSwapIndices(newIndices);
+      }
     }
 
-    setTouchedIndex(null);
-    setDragPosition({ x: 0, y: 0 });
-    setDraggedIndex(null);
-    setDropIndex(null);
+    resetDragState();
   };
 
   /**
