@@ -14,9 +14,6 @@ permissions:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    concurrency:
-      group: pages
-      cancel-in-progress: true
     
     environment:
       name: github-pages
@@ -29,13 +26,17 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '18'
+          node-version: '20'
           cache: 'npm'
           cache-dependency-path: './gui_tensor_expressions/package-lock.json'
 
-      - name: Install dependencies
+      - name: Clean install
         working-directory: ./gui_tensor_expressions
-        run: npm ci
+        run: |
+          rm -rf node_modules
+          rm package-lock.json
+          npm install
+          npm install @babel/plugin-proposal-private-property-in-object@7.21.11
 
       - name: Build
         working-directory: ./gui_tensor_expressions
@@ -52,5 +53,3 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
