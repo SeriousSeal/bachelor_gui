@@ -14,7 +14,6 @@ const NodeIndicesPanel = ({ indices, onSwapIndices, position, onMouseEnter, onMo
   const [draggedIndex, setDraggedIndex] = useState(null);
   const [dropIndex, setDropIndex] = useState(null);
   const [touchedIndex, setTouchedIndex] = useState(null);
-  const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
 
   /**
    * Resets the drag and drop state
@@ -23,7 +22,6 @@ const NodeIndicesPanel = ({ indices, onSwapIndices, position, onMouseEnter, onMo
     setDraggedIndex(null);
     setDropIndex(null);
     setTouchedIndex(null);
-    setDragPosition({ x: 0, y: 0 });
   };
 
   /**
@@ -90,8 +88,21 @@ const NodeIndicesPanel = ({ indices, onSwapIndices, position, onMouseEnter, onMo
     e.preventDefault();
     e.stopPropagation();
     const touch = e.touches[0];
+    const element = e.target;
+
+    // Create clone for drag preview
+    const clone = element.cloneNode(true);
+    clone.style.position = 'fixed';
+    clone.style.pointerEvents = 'none';
+    clone.style.opacity = '0.8';
+    clone.style.zIndex = '1000';
+    clone.style.width = `${element.offsetWidth}px`;
+    clone.style.left = `${touch.clientX - element.offsetWidth / 2}px`;
+    clone.style.top = `${touch.clientY - element.offsetHeight / 2}px`;
+    clone.id = 'touch-drag-clone';
+    document.body.appendChild(clone);
+
     setTouchedIndex(index);
-    setDragPosition({ x: touch.clientX, y: touch.clientY });
     setDraggedIndex(index);
   };
 
@@ -106,7 +117,11 @@ const NodeIndicesPanel = ({ indices, onSwapIndices, position, onMouseEnter, onMo
     if (touchedIndex === null) return;
 
     const touch = e.touches[0];
-    const currentElement = e.target;
+    const clone = document.getElementById('touch-drag-clone');
+    if (clone) {
+      clone.style.left = `${touch.clientX - clone.offsetWidth / 2}px`;
+      clone.style.top = `${touch.clientY - clone.offsetHeight / 2}px`;
+    }
 
     // Find the closest element to drop on
     const elements = document.elementsFromPoint(touch.clientX, touch.clientY);
@@ -117,18 +132,10 @@ const NodeIndicesPanel = ({ indices, onSwapIndices, position, onMouseEnter, onMo
 
     if (dropElement) {
       const newDropIndex = parseInt(dropElement.getAttribute('data-index'));
-      if (dropIndex !== newDropIndex) {
-        setDropIndex(newDropIndex);
-      }
+      setDropIndex(newDropIndex);
     } else {
-      // Reset drop index if not over a valid target
       setDropIndex(null);
     }
-
-    // Visual feedback for the dragged element
-    currentElement.style.transform = `translate(${touch.clientX - dragPosition.x}px, ${touch.clientY - dragPosition.y}px)`;
-    currentElement.style.opacity = '0.8';
-    currentElement.style.zIndex = '1000';
   };
 
   /**
@@ -139,10 +146,11 @@ const NodeIndicesPanel = ({ indices, onSwapIndices, position, onMouseEnter, onMo
     e.preventDefault();
     e.stopPropagation();
 
-    const currentElement = e.target;
-    currentElement.style.transform = '';
-    currentElement.style.opacity = '';
-    currentElement.style.zIndex = '';
+    // Remove clone
+    const clone = document.getElementById('touch-drag-clone');
+    if (clone) {
+      clone.remove();
+    }
 
     if (touchedIndex !== null && dropIndex !== null) {
       const newIndices = [...indices];
