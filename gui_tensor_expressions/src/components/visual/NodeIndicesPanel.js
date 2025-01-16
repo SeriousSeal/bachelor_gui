@@ -14,7 +14,6 @@ const NodeIndicesPanel = ({ indices, onSwapIndices, position, onMouseEnter, onMo
   const [draggedIndex, setDraggedIndex] = useState(null);
   const [dropIndex, setDropIndex] = useState(null);
   const [touchedIndex, setTouchedIndex] = useState(null);
-  const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
   const [touchOffset, setTouchOffset] = useState({ x: 0, y: 0 });
 
   /**
@@ -24,7 +23,6 @@ const NodeIndicesPanel = ({ indices, onSwapIndices, position, onMouseEnter, onMo
     setDraggedIndex(null);
     setDropIndex(null);
     setTouchedIndex(null);
-    setDragPosition({ x: 0, y: 0 });
     setTouchOffset({ x: 0, y: 0 });
   };
 
