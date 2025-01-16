@@ -89,18 +89,20 @@ const NodeIndicesPanel = ({ indices, onSwapIndices, position, onMouseEnter, onMo
     e.stopPropagation();
     const touch = e.touches[0];
     const element = e.target;
+    const rect = element.getBoundingClientRect();
 
-    // Create clone for drag preview
-    const clone = element.cloneNode(true);
-    clone.style.position = 'fixed';
-    clone.style.pointerEvents = 'none';
-    clone.style.opacity = '0.8';
-    clone.style.zIndex = '1000';
-    clone.style.width = `${element.offsetWidth}px`;
-    clone.style.left = `${touch.clientX - element.offsetWidth / 2}px`;
-    clone.style.top = `${touch.clientY - element.offsetHeight / 2}px`;
-    clone.id = 'touch-drag-clone';
-    document.body.appendChild(clone);
+    // Create ghost element
+    const ghost = element.cloneNode(true);
+    ghost.id = 'touch-drag-ghost';
+    ghost.style.position = 'fixed';
+    ghost.style.pointerEvents = 'none';
+    ghost.style.opacity = '0.8';
+    ghost.style.zIndex = '10000';
+    ghost.style.width = `${rect.width}px`;
+    ghost.style.height = `${rect.height}px`;
+    ghost.style.left = `${touch.clientX - (rect.width / 2)}px`;
+    ghost.style.top = `${touch.clientY - (rect.height / 2)}px`;
+    document.body.appendChild(ghost);
 
     setTouchedIndex(index);
     setDraggedIndex(index);
@@ -117,10 +119,10 @@ const NodeIndicesPanel = ({ indices, onSwapIndices, position, onMouseEnter, onMo
     if (touchedIndex === null) return;
 
     const touch = e.touches[0];
-    const clone = document.getElementById('touch-drag-clone');
-    if (clone) {
-      clone.style.left = `${touch.clientX - clone.offsetWidth / 2}px`;
-      clone.style.top = `${touch.clientY - clone.offsetHeight / 2}px`;
+    const ghost = document.getElementById('touch-drag-ghost');
+    if (ghost) {
+      ghost.style.left = `${touch.clientX - ghost.offsetWidth / 2}px`;
+      ghost.style.top = `${touch.clientY - ghost.offsetHeight / 2}px`;
     }
 
     // Find the closest element to drop on
@@ -146,10 +148,10 @@ const NodeIndicesPanel = ({ indices, onSwapIndices, position, onMouseEnter, onMo
     e.preventDefault();
     e.stopPropagation();
 
-    // Remove clone
-    const clone = document.getElementById('touch-drag-clone');
-    if (clone) {
-      clone.remove();
+    // Remove ghost element
+    const ghost = document.getElementById('touch-drag-ghost');
+    if (ghost) {
+      ghost.remove();
     }
 
     if (touchedIndex !== null && dropIndex !== null) {
@@ -199,7 +201,7 @@ const NodeIndicesPanel = ({ indices, onSwapIndices, position, onMouseEnter, onMo
               data-index={idx}
               draggable
               className={`px-2 py-1 rounded cursor-move select-none transition-all
-                ${draggedIndex === idx ? 'bg-gray-100' : 'bg-gray-100 hover:bg-gray-200'}
+                ${draggedIndex === idx ? 'opacity-50 bg-gray-100' : 'bg-gray-100 hover:bg-gray-200'}
               `}
               onDragStart={(e) => handleDragStart(e, idx)}
               onDragOver={(e) => handleDragOver(e, idx)}
@@ -210,8 +212,7 @@ const NodeIndicesPanel = ({ indices, onSwapIndices, position, onMouseEnter, onMo
               onTouchCancel={handleTouchEnd}
               style={{
                 position: 'relative',
-                touchAction: 'none',
-                transition: draggedIndex === idx ? 'none' : 'transform 0.2s'
+                touchAction: 'none'
               }}
             >
               {dim}
