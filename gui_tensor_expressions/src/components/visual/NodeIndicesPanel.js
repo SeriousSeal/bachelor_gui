@@ -120,10 +120,14 @@ const NodeIndicesPanel = ({ indices, onSwapIndices, position, onMouseEnter, onMo
       if (dropIndex !== newDropIndex) {
         setDropIndex(newDropIndex);
       }
+    } else {
+      // Reset drop index if not over a valid target
+      setDropIndex(null);
     }
 
     // Visual feedback for the dragged element
     currentElement.style.transform = `translate(${touch.clientX - dragPosition.x}px, ${touch.clientY - dragPosition.y}px)`;
+    currentElement.style.opacity = '0.8';
     currentElement.style.zIndex = '1000';
   };
 
@@ -137,19 +141,20 @@ const NodeIndicesPanel = ({ indices, onSwapIndices, position, onMouseEnter, onMo
 
     const currentElement = e.target;
     currentElement.style.transform = '';
+    currentElement.style.opacity = '';
     currentElement.style.zIndex = '';
 
     if (touchedIndex !== null && dropIndex !== null) {
       const newIndices = [...indices];
       const [draggedValue] = newIndices.splice(touchedIndex, 1);
       newIndices.splice(dropIndex, 0, draggedValue);
-      onSwapIndices(newIndices);
+
+      if (indices.join(',') !== newIndices.join(',')) {
+        onSwapIndices(newIndices);
+      }
     }
 
-    setTouchedIndex(null);
-    setDragPosition({ x: 0, y: 0 });
-    setDraggedIndex(null);
-    setDropIndex(null);
+    resetDragState();
   };
 
   /**
@@ -186,7 +191,7 @@ const NodeIndicesPanel = ({ indices, onSwapIndices, position, onMouseEnter, onMo
               data-index={idx}
               draggable
               className={`px-2 py-1 rounded cursor-move select-none transition-all
-                ${draggedIndex === idx ? 'opacity-50 bg-gray-100' : 'bg-gray-100 hover:bg-gray-200'}
+                ${draggedIndex === idx ? 'bg-gray-100' : 'bg-gray-100 hover:bg-gray-200'}
               `}
               onDragStart={(e) => handleDragStart(e, idx)}
               onDragOver={(e) => handleDragOver(e, idx)}
