@@ -15,6 +15,7 @@ const NodeIndicesPanel = ({ indices, onSwapIndices, position, onMouseEnter, onMo
   const [dropIndex, setDropIndex] = useState(null);
   const [touchedIndex, setTouchedIndex] = useState(null);
   const [dragPosition, setDragPosition] = useState({ x: 0, y: 0 });
+  const [touchOffset, setTouchOffset] = useState({ x: 0, y: 0 });
 
   /**
    * Resets the drag and drop state
@@ -24,6 +25,7 @@ const NodeIndicesPanel = ({ indices, onSwapIndices, position, onMouseEnter, onMo
     setDropIndex(null);
     setTouchedIndex(null);
     setDragPosition({ x: 0, y: 0 });
+    setTouchOffset({ x: 0, y: 0 });
   };
 
   /**
@@ -90,8 +92,12 @@ const NodeIndicesPanel = ({ indices, onSwapIndices, position, onMouseEnter, onMo
     e.preventDefault();
     e.stopPropagation();
     const touch = e.touches[0];
+    const rect = e.target.getBoundingClientRect();
+    setTouchOffset({
+      x: touch.clientX - rect.left,
+      y: touch.clientY - rect.top
+    });
     setTouchedIndex(index);
-    setDragPosition({ x: touch.clientX, y: touch.clientY });
     setDraggedIndex(index);
   };
 
@@ -117,13 +123,14 @@ const NodeIndicesPanel = ({ indices, onSwapIndices, position, onMouseEnter, onMo
       if (dropIndex !== newDropIndex) {
         setDropIndex(newDropIndex);
       }
-    } else {
-      // Reset drop index if not over any valid target
-      setDropIndex(null);
     }
 
-    // Visual feedback for the dragged element
-    currentElement.style.transform = `translate(${touch.clientX - dragPosition.x}px, ${touch.clientY - dragPosition.y}px)`;
+    // Update position relative to initial touch point
+    const x = touch.clientX - touchOffset.x;
+    const y = touch.clientY - touchOffset.y;
+    currentElement.style.position = 'fixed';
+    currentElement.style.left = `${x}px`;
+    currentElement.style.top = `${y}px`;
     currentElement.style.zIndex = '1000';
   };
 
@@ -136,8 +143,11 @@ const NodeIndicesPanel = ({ indices, onSwapIndices, position, onMouseEnter, onMo
     e.stopPropagation();
 
     const currentElement = e.target;
-    currentElement.style.transform = '';
+    currentElement.style.position = '';
+    currentElement.style.left = '';
+    currentElement.style.top = '';
     currentElement.style.zIndex = '';
+    currentElement.style.transform = '';
 
     if (touchedIndex !== null && dropIndex !== null) {
       const newIndices = [...indices];
@@ -186,9 +196,15 @@ const NodeIndicesPanel = ({ indices, onSwapIndices, position, onMouseEnter, onMo
               key={idx}
               data-index={idx}
               draggable
-              className={`px-2 py-1 rounded cursor-move select-none transition-all
-                ${draggedIndex === idx ? 'opacity-50 bg-gray-100' : 'bg-gray-100 hover:bg-gray-200'}
+              className={`px-2 py-1 rounded cursor-move select-none
+                ${draggedIndex === idx ? 'opacity-50' : 'bg-gray-100 hover:bg-gray-200'}
+                ${touchedIndex === idx ? '' : 'transition-all duration-200'}
               `}
+              style={{
+                position: touchedIndex === idx ? 'fixed' : 'relative',
+                touchAction: 'none',
+                backgroundColor: draggedIndex === idx ? 'rgb(243 244 246)' : undefined
+              }}
               onDragStart={(e) => handleDragStart(e, idx)}
               onDragOver={(e) => handleDragOver(e, idx)}
               onDragEnd={handleDragEnd}
@@ -196,11 +212,6 @@ const NodeIndicesPanel = ({ indices, onSwapIndices, position, onMouseEnter, onMo
               onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
               onTouchCancel={handleTouchEnd}
-              style={{
-                position: 'relative',
-                touchAction: 'none',
-                transition: draggedIndex === idx ? 'none' : 'transform 0.2s'
-              }}
             >
               {dim}
             </div>
