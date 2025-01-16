@@ -12,10 +12,8 @@ function App() {
   const compressedExpression = searchParams.get('e');
   const compressedSizes = searchParams.get('s');
 
-
   const initialExpression = decompressData(compressedExpression);
   const initialSizes = decompressData(compressedSizes);
-
 
   // Clear URL parameters after reading them
   useEffect(() => {
