@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 
 /**
  * NodeIndicesPanel Component
@@ -102,13 +102,10 @@ const NodeIndicesPanel = ({ indices, onSwapIndices, position, onMouseEnter, onMo
     ghost.style.height = `${rect.height}px`;
     ghost.style.left = `${touch.clientX - (rect.width / 2)}px`;
     ghost.style.top = `${touch.clientY - (rect.height / 2)}px`;
-    ghost.style.transform = 'scale(1.1)'; // Slightly larger to show it's being dragged
     document.body.appendChild(ghost);
 
     setTouchedIndex(index);
     setDraggedIndex(index);
-    // Set initial drop index to same as dragged to show preview immediately
-    setDropIndex(index);
   };
 
   /**
@@ -130,13 +127,15 @@ const NodeIndicesPanel = ({ indices, onSwapIndices, position, onMouseEnter, onMo
 
     // Find the closest element to drop on
     const elements = document.elementsFromPoint(touch.clientX, touch.clientY);
-    const dropElement = elements.find(el =>
-      el.hasAttribute('data-index')
-    );
+    const indexElements = elements.filter(el => el.hasAttribute('data-index'));
 
-    if (dropElement) {
-      const newDropIndex = parseInt(dropElement.getAttribute('data-index'));
-      setDropIndex(newDropIndex);
+    if (indexElements.length > 0) {
+      const targetElement = indexElements[0];
+      const targetIndex = parseInt(targetElement.getAttribute('data-index'));
+      const rect = targetElement.getBoundingClientRect();
+      const isAfter = touch.clientX > rect.left + rect.width / 2;
+
+      setDropIndex(isAfter ? targetIndex + 1 : targetIndex);
     }
   };
 
@@ -166,17 +165,6 @@ const NodeIndicesPanel = ({ indices, onSwapIndices, position, onMouseEnter, onMo
     resetDragState();
   };
 
-  /**
-   * Memoized preview of indices during drag operation
-   */
-  const previewIndices = useMemo(() => {
-    if (draggedIndex === null || dropIndex === null) return indices;
-    const newIndices = [...indices];
-    const [draggedValue] = newIndices.splice(draggedIndex, 1);
-    newIndices.splice(dropIndex, 0, draggedValue);
-    return newIndices;
-  }, [indices, draggedIndex, dropIndex]);
-
   // Render Component
   return (
     <div
@@ -200,7 +188,9 @@ const NodeIndicesPanel = ({ indices, onSwapIndices, position, onMouseEnter, onMo
               data-index={idx}
               draggable
               className={`px-2 py-1 rounded cursor-move select-none transition-all
-                ${draggedIndex === idx ? 'bg-gray-100' : 'bg-gray-100 hover:bg-gray-200'}
+                ${draggedIndex === idx ? 'opacity-50' : 'bg-gray-100 hover:bg-gray-200'}
+                ${dropIndex === idx ? 'border-l-2 border-blue-500' : ''}
+                ${dropIndex === idx + 1 ? 'border-r-2 border-blue-500' : ''}
               `}
               onDragStart={(e) => handleDragStart(e, idx)}
               onDragOver={(e) => handleDragOver(e, idx)}
@@ -211,30 +201,13 @@ const NodeIndicesPanel = ({ indices, onSwapIndices, position, onMouseEnter, onMo
               onTouchCancel={handleTouchEnd}
               style={{
                 position: 'relative',
-                touchAction: 'none',
-                transition: draggedIndex === idx ? 'none' : 'transform 0.2s'
+                touchAction: 'none'
               }}
             >
               {dim}
             </div>
           ))}
         </div>
-        {draggedIndex !== null && dropIndex !== null && (
-          <div className="flex gap-2 items-center border-t pt-2">
-            <span className="text-xs text-gray-500">Preview:</span>
-            <div className="flex gap-2">
-              {previewIndices.map((dim, idx) => (
-                <div
-                  key={idx}
-                  className={`px-2 py-1 rounded bg-gray-50 text-sm
-                    ${dim === indices[draggedIndex] ? 'outline outline-2 outline-red-500' : ''}`}
-                >
-                  {dim}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
       <div className="w-2 h-2 bg-white border-b border-r border-gray-200 absolute -bottom-1 left-1/2 -translate-x-1/2 rotate-45" />
     </div>
