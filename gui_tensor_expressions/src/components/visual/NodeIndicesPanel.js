@@ -13,6 +13,12 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
+/**
+ * A draggable item component that represents a single index in the panel
+ * @param {Object} props - Component props
+ * @param {string|number} props.id - The index value to display and use as identifier
+ * @returns {JSX.Element} A draggable div containing the index
+ */
 const SortableItem = ({ id }) => {
   const {
     attributes,
@@ -42,11 +48,28 @@ const SortableItem = ({ id }) => {
   );
 };
 
-
-
+/**
+ * A panel component that displays and allows reordering of tensor indices
+ * @param {Object} props - Component props
+ * @param {Array<string|number>} props.indices - Array of indices to display and reorder
+ * @param {Function} props.onSwapIndices - Callback function called with new indices array when order changes
+ * @param {Object} props.position - Position object for the panel
+ * @param {number} props.position.x - X coordinate for panel position
+ * @param {number} props.position.y - Y coordinate for panel position
+ * @param {Function} props.onMouseEnter - Handler for mouse enter event
+ * @param {Function} props.onMouseLeave - Handler for mouse leave event
+ * @returns {JSX.Element} A floating panel with draggable indices
+ */
 const NodeIndicesPanel = ({ indices, onSwapIndices, position, onMouseEnter, onMouseLeave }) => {
+  // State for preview and active item tracking
   const [previewIndices, setPreviewIndices] = useState(null);
   const [activeId, setActiveId] = useState(null);
+
+  /**
+   * Configure drag sensors with custom activation constraints
+   * Pointer sensor requires 5px movement to start drag
+   * Touch sensor requires 250ms hold and 5px tolerance
+   */
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -61,11 +84,22 @@ const NodeIndicesPanel = ({ indices, onSwapIndices, position, onMouseEnter, onMo
     })
   );
 
+  /**
+   * Handles the start of a drag operation
+   * @param {Object} event - Drag start event
+   * @param {Object} event.active - Information about the dragged item
+   */
   const handleDragStart = (event) => {
     setPreviewIndices(null);
     setActiveId(event.active.id);
   };
 
+  /**
+   * Handles the drag over event to show preview of new order
+   * @param {Object} event - Drag over event
+   * @param {Object} event.active - Currently dragged item
+   * @param {Object} event.over - Item being dragged over
+   */
   const handleDragOver = (event) => {
     const { active, over } = event;
 
@@ -84,6 +118,12 @@ const NodeIndicesPanel = ({ indices, onSwapIndices, position, onMouseEnter, onMo
     setPreviewIndices(newIndices);
   };
 
+  /**
+   * Handles the end of drag operation and applies the new order if valid
+   * @param {Object} event - Drag end event
+   * @param {Object} event.active - The item that was dragged
+   * @param {Object} event.over - The item it was dropped on
+   */
   const handleDragEnd = (event) => {
     const { active, over } = event;
 
