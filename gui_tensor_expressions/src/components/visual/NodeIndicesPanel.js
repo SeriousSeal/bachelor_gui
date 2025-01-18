@@ -1,171 +1,77 @@
-import React, { useState } from 'react';
+import React from 'react';
+import {
+  DndContext,
+  useSensors,
+  useSensor,
+  PointerSensor,
+  TouchSensor,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  horizontalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
-/**
- * NodeIndicesPanel Component
- * Displays a draggable panel of indices that can be reordered through drag and drop.
- * @param {Array} indices - Array of indices to display
- * @param {Function} onSwapIndices - Callback function when indices are swapped
- * @param {Object} position - {x, y} coordinates for panel positioning
- * @param {Function} onMouseEnter - Mouse enter event handler
- * @param {Function} onMouseLeave - Mouse leave event handler
- */
+const SortableItem = ({ id }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  return (
+    <div
+      ref={setNodeRef}
+      {...attributes}
+      {...listeners}
+      className={`px-2 py-1 rounded cursor-move select-none
+        ${isDragging ? 'opacity-50' : 'bg-gray-100 hover:bg-gray-200'}
+      `}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        touchAction: 'none',
+      }}
+    >
+      {id}
+    </div>
+  );
+};
+
 const NodeIndicesPanel = ({ indices, onSwapIndices, position, onMouseEnter, onMouseLeave }) => {
-  // State Management
-  const [draggedIndex, setDraggedIndex] = useState(null);
-  const [dropIndex, setDropIndex] = useState(null);
-  const [touchedIndex, setTouchedIndex] = useState(null);
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5,
+      },
+    }),
+    useSensor(TouchSensor, {
+      activationConstraint: {
+        delay: 250,
+        tolerance: 5,
+      },
+    })
+  );
 
-  /**
-   * Resets the drag and drop state
-   */
-  const resetDragState = () => {
-    setDraggedIndex(null);
-    setDropIndex(null);
-    setTouchedIndex(null);
-  };
+  const handleDragEnd = (event) => {
+    const { active, over } = event;
 
-  /**
-   * Handles the start of a drag operation
-   * @param {Event} e - Drag start event
-   * @param {number} index - Index being dragged
-   */
-  const handleDragStart = (e, index) => {
-    e.stopPropagation();
-    setDraggedIndex(index);
-    e.dataTransfer.effectAllowed = 'move';
-  };
+    if (active.id !== over.id) {
+      const oldIndex = indices.indexOf(active.id);
+      const newIndex = indices.indexOf(over.id);
 
-  /**
-   * Handles dragging over a droppable target
-   * @param {Event} e - Drag over event
-   * @param {number} index - Index being dragged over
-   */
-  const handleDragOver = (e, index) => {
-    e.preventDefault();
-    if (draggedIndex === null) return;
-    setDropIndex(index);
-  };
+      const newIndices = [...indices];
+      const [movedItem] = newIndices.splice(oldIndex, 1);
+      newIndices.splice(newIndex, 0, movedItem);
 
-  /**
-   * Handles dragging over the container
-   * @param {Event} e - Drag over event
-   */
-  const handleDragOverContainer = (e) => {
-    e.preventDefault();
-  };
-
-  /**
-   * Handles the drop event to reorder indices
-   * @param {Event} e - Drop event
-   */
-  const handleDrop = (e) => {
-    e.preventDefault();
-    if (draggedIndex === null || dropIndex === null) return;
-
-    const newIndices = [...indices];
-    const [draggedValue] = newIndices.splice(draggedIndex, 1);
-    newIndices.splice(dropIndex, 0, draggedValue);
-
-    if (indices.join(',') !== newIndices.join(',')) {
       onSwapIndices(newIndices);
     }
-    resetDragState();
   };
 
-  /**
-   * Handles the end of a drag operation
-   */
-  const handleDragEnd = () => {
-    resetDragState();
-  };
-
-  /**
-   * Handles the start of a touch operation
-   * @param {Event} e - Touch start event
-   * @param {number} index - Index being touched
-   */
-  const handleTouchStart = (e, index) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const touch = e.touches[0];
-    const element = e.target;
-    const rect = element.getBoundingClientRect();
-
-    // Create ghost element
-    const ghost = element.cloneNode(true);
-    ghost.id = 'touch-drag-ghost';
-    ghost.style.position = 'fixed';
-    ghost.style.pointerEvents = 'none';
-    ghost.style.opacity = '0.8';
-    ghost.style.zIndex = '10000';
-    ghost.style.width = `${rect.width}px`;
-    ghost.style.height = `${rect.height}px`;
-    ghost.style.left = `${touch.clientX - (rect.width / 2)}px`;
-    ghost.style.top = `${touch.clientY - (rect.height / 2)}px`;
-    document.body.appendChild(ghost);
-
-    setTouchedIndex(index);
-    setDraggedIndex(index);
-  };
-
-  /**
-   * Handles moving during a touch operation
-   * @param {Event} e - Touch move event
-   */
-  const handleTouchMove = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    if (touchedIndex === null) return;
-
-    const touch = e.touches[0];
-    const ghost = document.getElementById('touch-drag-ghost');
-    if (ghost) {
-      ghost.style.left = `${touch.clientX - ghost.offsetWidth / 2}px`;
-      ghost.style.top = `${touch.clientY - ghost.offsetHeight / 2}px`;
-    }
-
-    // Find the closest element to drop on
-    const elements = document.elementsFromPoint(touch.clientX, touch.clientY);
-    const indexElements = elements.filter(el => el.hasAttribute('data-index'));
-
-    if (indexElements.length > 0) {
-      const targetElement = indexElements[0];
-      const targetIndex = parseInt(targetElement.getAttribute('data-index'));
-      const rect = targetElement.getBoundingClientRect();
-      const isAfter = touch.clientX > rect.left + rect.width / 2;
-
-      setDropIndex(isAfter ? targetIndex + 1 : targetIndex);
-    }
-  };
-
-  /**
-   * Handles the end of a touch operation
-   * @param {Event} e - Touch end event
-   */
-  const handleTouchEnd = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    const ghost = document.getElementById('touch-drag-ghost');
-    if (ghost) {
-      ghost.remove();
-    }
-
-    if (touchedIndex !== null && dropIndex !== null && touchedIndex !== dropIndex) {
-      const newIndices = [...indices];
-      const [draggedValue] = newIndices.splice(touchedIndex, 1);
-      newIndices.splice(dropIndex, 0, draggedValue);
-
-      if (indices.join(',') !== newIndices.join(',')) {
-        onSwapIndices(newIndices);
-      }
-    }
-
-    resetDragState();
-  };
-
-  // Render Component
   return (
     <div
       className="fixed z-[9999] bg-white shadow-lg rounded-md p-2 border border-gray-200"
@@ -176,39 +82,22 @@ const NodeIndicesPanel = ({ indices, onSwapIndices, position, onMouseEnter, onMo
       }}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
-      onDragOver={handleDragOverContainer}
-      onDrop={handleDrop}
-      onTouchMove={(e) => e.preventDefault()}
     >
-      <div className="flex flex-col gap-2">
-        <div className="flex gap-2 items-center relative min-w-[100px]">
-          {indices.map((dim, idx) => (
-            <div
-              key={idx}
-              data-index={idx}
-              draggable
-              className={`px-2 py-1 rounded cursor-move select-none transition-all
-                ${draggedIndex === idx ? 'opacity-50' : 'bg-gray-100 hover:bg-gray-200'}
-                ${dropIndex === idx ? 'border-l-2 border-blue-500' : ''}
-                ${dropIndex === idx + 1 ? 'border-r-2 border-blue-500' : ''}
-              `}
-              onDragStart={(e) => handleDragStart(e, idx)}
-              onDragOver={(e) => handleDragOver(e, idx)}
-              onDragEnd={handleDragEnd}
-              onTouchStart={(e) => handleTouchStart(e, idx)}
-              onTouchMove={handleTouchMove}
-              onTouchEnd={handleTouchEnd}
-              onTouchCancel={handleTouchEnd}
-              style={{
-                position: 'relative',
-                touchAction: 'none'
-              }}
-            >
-              {dim}
-            </div>
-          ))}
-        </div>
-      </div>
+      <DndContext
+        sensors={sensors}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext
+          items={indices}
+          strategy={horizontalListSortingStrategy}
+        >
+          <div className="flex gap-2 items-center relative min-w-[100px]">
+            {indices.map((index) => (
+              <SortableItem key={index} id={index} />
+            ))}
+          </div>
+        </SortableContext>
+      </DndContext>
       <div className="w-2 h-2 bg-white border-b border-r border-gray-200 absolute -bottom-1 left-1/2 -translate-x-1/2 rotate-45" />
     </div>
   );
