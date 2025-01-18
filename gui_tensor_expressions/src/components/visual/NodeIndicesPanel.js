@@ -1,10 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   DndContext,
   useSensors,
   useSensor,
   PointerSensor,
-  TouchSensor,
+  TouchSensor
 } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -29,7 +29,7 @@ const SortableItem = ({ id }) => {
       {...attributes}
       {...listeners}
       className={`px-2 py-1 rounded cursor-move select-none
-        ${isDragging ? 'opacity-50' : 'bg-gray-100 hover:bg-gray-200'}
+        ${isDragging ? 'bg-blue-100' : 'bg-gray-100 hover:bg-gray-200'}
       `}
       style={{
         transform: CSS.Transform.toString(transform),
@@ -42,7 +42,11 @@ const SortableItem = ({ id }) => {
   );
 };
 
+
+
 const NodeIndicesPanel = ({ indices, onSwapIndices, position, onMouseEnter, onMouseLeave }) => {
+  const [previewIndices, setPreviewIndices] = useState(null);
+  const [activeId, setActiveId] = useState(null);
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -57,19 +61,45 @@ const NodeIndicesPanel = ({ indices, onSwapIndices, position, onMouseEnter, onMo
     })
   );
 
+  const handleDragStart = (event) => {
+    setPreviewIndices(null);
+    setActiveId(event.active.id);
+  };
+
+  const handleDragOver = (event) => {
+    const { active, over } = event;
+
+    if (!over) {
+      setPreviewIndices(null);
+      return;
+    }
+
+    const oldIndex = indices.indexOf(active.id);
+    const newIndex = indices.indexOf(over.id);
+
+    const newIndices = [...indices];
+    const [movedItem] = newIndices.splice(oldIndex, 1);
+    newIndices.splice(newIndex, 0, movedItem);
+
+    setPreviewIndices(newIndices);
+  };
+
   const handleDragEnd = (event) => {
     const { active, over } = event;
 
-    if (active.id !== over.id) {
+    if (over) {
       const oldIndex = indices.indexOf(active.id);
       const newIndex = indices.indexOf(over.id);
 
-      const newIndices = [...indices];
-      const [movedItem] = newIndices.splice(oldIndex, 1);
-      newIndices.splice(newIndex, 0, movedItem);
-
-      onSwapIndices(newIndices);
+      if (oldIndex !== newIndex) {
+        const newIndices = [...indices];
+        const [movedItem] = newIndices.splice(oldIndex, 1);
+        newIndices.splice(newIndex, 0, movedItem);
+        onSwapIndices(newIndices);
+      }
     }
+    setPreviewIndices(null);
+    setActiveId(null);
   };
 
   return (
@@ -83,8 +113,22 @@ const NodeIndicesPanel = ({ indices, onSwapIndices, position, onMouseEnter, onMo
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >
+      {previewIndices && (
+        <div className="absolute -top-8 left-0 right-0 bg-gray-100 p-1 rounded-md border border-gray-200 text-sm text-gray-600 flex gap-1 justify-center">
+          Preview: {previewIndices.map((index, i) => (
+            <React.Fragment key={index}>
+              <span className={index === activeId ? 'text-blue-600 font-medium' : ''}>
+                {index}
+              </span>
+              {i < previewIndices.length - 1 && ' , '}
+            </React.Fragment>
+          ))}
+        </div>
+      )}
       <DndContext
         sensors={sensors}
+        onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
       >
         <SortableContext
@@ -98,7 +142,6 @@ const NodeIndicesPanel = ({ indices, onSwapIndices, position, onMouseEnter, onMo
           </div>
         </SortableContext>
       </DndContext>
-      <div className="w-2 h-2 bg-white border-b border-r border-gray-200 absolute -bottom-1 left-1/2 -translate-x-1/2 rotate-45" />
     </div>
   );
 };
