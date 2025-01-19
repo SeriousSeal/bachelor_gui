@@ -65,9 +65,9 @@ const useDeviceSize = () => {
                 miniFlow: {
                     width: 250,
                     height: 100,
-                    nodeWidth: 70,
+                    nodeWidth: 100,
                     nodeHeight: Math.max(20, 24 * relativeFactor),
-                    fontSize: Math.max(11, 12 * relativeFactor),
+                    fontSize: Math.max(15, 12 * relativeFactor),
                     letterSize: Math.max(12, 14 * relativeFactor)
                 }
             };
@@ -83,9 +83,9 @@ const useDeviceSize = () => {
             miniFlow: {
                 width: Math.min(260, panelWidth * 0.8),
                 height: Math.max(120, 140 * relativeFactor),
-                nodeWidth: Math.min(100, 120 * relativeFactor),
+                nodeWidth: 120,
                 nodeHeight: Math.max(30, 35 * relativeFactor),
-                fontSize: Math.max(16, 18 * relativeFactor),
+                fontSize: 16,
                 letterSize: Math.max(18, 20 * relativeFactor)
             }
         };

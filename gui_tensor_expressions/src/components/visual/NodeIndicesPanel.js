@@ -104,7 +104,6 @@ const NodeIndicesPanel = ({ indices, onSwapIndices, position, onMouseEnter, onMo
     const { active, over } = event;
 
     if (!over) {
-      setPreviewIndices(null);
       return;
     }
 
