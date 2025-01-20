@@ -69,6 +69,51 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
   const [totalOperations, setTotalOperations] = useState(0);
   const [selectedNodeOperations, setSelectedNodeOperations] = useState(0);
 
+  // ============= History Management =============
+  /**
+    * updating and deleting history
+    */
+  useEffect(() => {
+    const savedHistory = localStorage.getItem('einsumHistory');
+    if (savedHistory) {
+      try {
+        const parsedHistory = JSON.parse(savedHistory);
+        if (Array.isArray(parsedHistory)) {
+          setHistory(parsedHistory);
+        }
+      } catch (e) {
+        console.warn('Failed to parse saved history, starting fresh');
+        localStorage.removeItem('einsumHistory');
+      }
+    }
+  }, []);
+
+  const updateHistory = useCallback((newHistory) => {
+    const historyToSave = typeof newHistory === 'function'
+      ? newHistory(history)
+      : newHistory;
+
+    setHistory(historyToSave);
+    try {
+      const serializableHistory = historyToSave.map(item => ({
+        expression: item.expression,
+        nodes: item.nodes,
+        edges: item.edges,
+        indexSizes: item.indexSizes
+        // Note: we don't save the tree instance as it's not serializable
+      }));
+
+      localStorage.setItem('einsumHistory', JSON.stringify(serializableHistory));
+    } catch (e) {
+      console.error('Failed to save history to local storage:', e);
+    }
+  }, [history]);
+
+  const handleClearHistory = useCallback(() => {
+    setHistory([]);
+    localStorage.removeItem('einsumHistory');
+  }, []);
+
   // ============= Core Tree Operations =============
 
   /**
@@ -96,7 +141,6 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
         if (!node) return;
         if (node.value && Array.isArray(node.value)) {
           for (const indice of node.value) {
-            // Preserve existing size if available, otherwise use default
             if (indexSizes && indexSizes.hasOwnProperty(indice)) {
               newIndexSizes[indice] = indexSizes[indice];
             } else if (!newIndexSizes.hasOwnProperty(indice)) {
@@ -110,11 +154,9 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
 
       traverseTree(unorderedTree);
 
-      // Update state and tree with new sizes in the correct order
       setIndexSizes(newIndexSizes);
       tree.updateIndexSizes(newIndexSizes);
 
-      // Calculate total operations
       const { totalOperations, faultyNodes } = calculateTotalOperations(newIndexSizes, unorderedTree);
       setTotalOperations(totalOperations);
 
@@ -124,12 +166,12 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
       setEdges1(edges);
 
       // Update history
-      setHistory(prevHistory => {
+      updateHistory(prevHistory => {
         const newItem = {
           expression: input,
           nodes,
           edges,
-          indexSizes: { ...newIndexSizes },  // Create a new object to prevent reference issues
+          indexSizes: { ...newIndexSizes },
           tree: tree
         };
         const existingIndex = prevHistory.findIndex(item => item.expression === input);
@@ -150,10 +192,10 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
 
       setTimeout(() => {
         fitView('tree1');
-        resolve(tree);  // Resolve with the tree
+        resolve(tree);
       }, 0);
     });
-  }, [setNodes1, setEdges1, setHistory, setTree, setTotalOperations, layoutOption, indexSizes]);
+  }, [setNodes1, setEdges1, updateHistory, setTree, setTotalOperations, layoutOption, indexSizes]);
 
   /**
    * Updates tree structure and recalculates operations after changes
@@ -201,7 +243,7 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
       }
 
       // Update history with the new tree
-      setHistory(prevHistory => {
+      updateHistory(prevHistory => {
         const newItem = {
           expression: treeString,
           nodes,
@@ -216,7 +258,7 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
       console.error('Error updating tree:', error);
       Toast.show('Error updating indices');
     }
-  }, [tree, indexSizes, layoutOption, setNodes1, setEdges1, selectedNode]);
+  }, [tree, indexSizes, layoutOption, setNodes1, setEdges1, selectedNode, updateHistory]);
 
   // ============= Tree Manipulation =============
 
@@ -271,7 +313,7 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
       setEdges1(edges);
 
       // Update history
-      setHistory(prevHistory => {
+      updateHistory(prevHistory => {
         const newItem = { expression: treeString, nodes, edges, indexSizes: indexSizes, tree: newTree };
         const existingIndex = prevHistory.findIndex(item => item.expression === treeString);
 
@@ -293,7 +335,7 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
       // Resolve with the updated tree
       resolve(newTree);
     });
-  }, [indexSizes, tree, setNodes1, setEdges1, setHistory, setTree, setTotalOperations]);
+  }, [indexSizes, tree, setNodes1, setEdges1, updateHistory, setTree, setTotalOperations]);
 
   /**
    * Adds a permutation node to the tree
@@ -331,7 +373,7 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
       setEdges1(edges);
 
       // Update history
-      setHistory(prevHistory => {
+      updateHistory(prevHistory => {
         const newItem = { expression: treeString, nodes, edges, indexSizes: indexSizes, tree: newTree };
         return [newItem, ...prevHistory.slice(0, 4)];
       });
@@ -339,7 +381,7 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
       // Resolve with the updated tree
       resolve(newTree);
     });
-  }, [indexSizes, tree, setNodes1, setEdges1, setHistory, setTree, setTotalOperations]);
+  }, [indexSizes, tree, setNodes1, setEdges1, updateHistory, setTree, setTotalOperations]);
 
   /**
    * Removes a permutation node from the tree
@@ -377,7 +419,7 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
       setEdges1(edges);
 
       // Update history
-      setHistory(prevHistory => {
+      updateHistory(prevHistory => {
         const newItem = { expression: treeString, nodes, edges, indexSizes: indexSizes, tree: newTree };
         return [newItem, ...prevHistory.slice(0, 4)];
       });
@@ -385,7 +427,7 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
       // Resolve with the updated tree
       resolve(newTree);
     });
-  }, [indexSizes, tree, setNodes1, setEdges1, setHistory, setTree, setTotalOperations]);
+  }, [indexSizes, tree, setNodes1, setEdges1, updateHistory, setTree, setTotalOperations]);
 
   // ============= Calculations =============
 
@@ -469,7 +511,7 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
     setNodes1(updatedNodes);
 
     // Update history by modifying the existing entry
-    setHistory(prevHistory => {
+    updateHistory(prevHistory => {
       const currentExpression = tree.treeToString();
       const existingIndex = prevHistory.findIndex(item => item.expression === currentExpression);
 
@@ -486,7 +528,7 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
       }
       return prevHistory;
     });
-  }, [nodes1, selectedNode, tree, setNodes1, edges1, findNodeInTree]);
+  }, [nodes1, selectedNode, tree, setNodes1, edges1, findNodeInTree, updateHistory]);
 
   // ============= Event Handlers =============
 
@@ -614,11 +656,23 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
    * Loads a tree from history
    */
   const selectTreeFromHistory = (item) => {
+    // First create a new tree instance from the expression
+    const newTree = new Tree(item.expression);
+
+    // Set all the states
     setNodes1(item.nodes);
     setEdges1(item.edges);
     setIndexSizes(item.indexSizes);
     setEinsumExpression(item.expression);
-    setTree(item.tree);
+    setTree(newTree);
+
+    // Update the tree with the stored index sizes
+    newTree.updateIndexSizes(item.indexSizes);
+
+    // Calculate operations for the new tree
+    const { totalOperations: newTotalOps } = calculateTotalOperations(item.indexSizes, newTree.getRoot());
+    setTotalOperations(newTotalOps);
+
     setTimeout(() => fitView('tree1'), 10);
   };
 
@@ -752,7 +806,11 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
                 Share
               </button>
             </div>
-            <HistoryPanel history={history} onSelectTree={selectTreeFromHistory} />
+            <HistoryPanel
+              history={history}
+              onSelectTree={selectTreeFromHistory}
+              onClear={handleClearHistory}
+            />
             <IndexSizeInput indexSizes={indexSizes} setIndexSizes={setIndexSizes} onUpdate={recalculateOperations} />
           </div>
         </Panel>

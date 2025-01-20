@@ -2,7 +2,7 @@ import React from 'react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip.jsx";
 import CollapsiblePanel from '../common/CollapsiblePanel';
 
-const HistoryPanel = ({ history, onSelectTree }) => {
+const HistoryPanel = ({ history, onSelectTree, onClear }) => {
   const maxLength = 200;
 
   const truncateExpression = (expression, maxLength = 200) => {
@@ -11,7 +11,24 @@ const HistoryPanel = ({ history, onSelectTree }) => {
   };
 
   return (
-    <CollapsiblePanel title="History">
+    <CollapsiblePanel
+      title={
+        <div className="flex justify-between items-center w-full">
+          <span>History</span>
+          {history.length > 0 && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onClear();
+              }}
+              className="px-2 py-1 text-sm text-red-600 hover:text-red-800 hover:bg-red-100 rounded-md transition-colors"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+      }
+    >
       <ul className="space-y-2">
         {history.map((item, index) => (
           <TooltipProvider key={index}>
