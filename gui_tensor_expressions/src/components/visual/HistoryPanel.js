@@ -12,21 +12,27 @@ const HistoryPanel = ({ history, onSelectTree, onClear }) => {
 
   return (
     <CollapsiblePanel
-      title={
-        <div className="flex justify-between items-center w-full">
-          <span>History</span>
-          {history.length > 0 && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
+      title="History"
+      headerContent={
+        history.length > 0 && (
+          <div
+            onClick={(e) => {
+              e.stopPropagation();
+              onClear();
+            }}
+            className="px-2 py-1 text-sm text-red-600 hover:text-red-800 hover:bg-red-100 rounded-md transition-colors ml-auto cursor-pointer"
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
                 onClear();
-              }}
-              className="px-2 py-1 text-sm text-red-600 hover:text-red-800 hover:bg-red-100 rounded-md transition-colors"
-            >
-              Clear
-            </button>
-          )}
-        </div>
+              }
+            }}
+          >
+            Clear
+          </div>
+        )
       }
     >
       <ul className="space-y-2">

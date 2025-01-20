@@ -301,12 +301,12 @@ const Flow = ({
    * @returns {Object|null} Connected node data or null if not found
    */
   const findConnectedNodes = useCallback((lookUpNode, node) => {
-    if (!lookUpNode) return { value: [], left: null, right: null };
+    if (!lookUpNode) return null;
     if (lookUpNode.id === node.id) {
       return {
-        value: lookUpNode.value || [],
-        left: lookUpNode.left ? { value: lookUpNode.left.value || [] } : null,
-        right: lookUpNode.right ? { value: lookUpNode.right.value || [] } : null
+        value: lookUpNode.value,
+        ...{ left: lookUpNode.left },
+        ...{ right: lookUpNode.right }
       };
     }
     const leftSearch = findConnectedNodes(lookUpNode.left, node);
@@ -406,8 +406,17 @@ const Flow = ({
       event.preventDefault();
       onHighlightNode(node);
     } else {
+      console.log('Selected Node:', node);
+      console.log(tree.getRoot())
+      const connectedNodes = findConnectedNodes(tree.getRoot(), node);
+      console.log('Connected Nodes:', {
+        node: node.id,
+        indices: connectedNodes.value,
+        leftIndices: connectedNodes.left?.value,
+        rightIndices: connectedNodes.right?.value
+      });
       setUiState(prevState => ({ ...prevState, selectedNode: node }));
-      setTreeState(prevState => ({ ...prevState, connectedNodes: findConnectedNodes(tree.getRoot(), node) }));
+      setTreeState(prevState => ({ ...prevState, connectedNodes }));
       if (propOnNodeClick) {
         propOnNodeClick(event, node);
       }
@@ -422,11 +431,23 @@ const Flow = ({
   const handleNodeMouseEnter = useCallback((event, node) => {
     if (!uiState.hoverEnabled || uiState.selectedNode) return;
     if (uiState.selectedNode && !node.data.left) return;
-    console.log(node);
+
+    console.log('Hovered Node:', {
+      id: node.id,
+      data: node.data
+    });
 
     clearTimeout(refs.timeout.current);
+    const connectedNodes = findConnectedNodes(tree.getRoot(), node);
+    console.log('Hovered Node Connected:', {
+      node: node.id,
+      indices: connectedNodes.value,
+      leftIndices: connectedNodes.left?.value,
+      rightIndices: connectedNodes.right?.value
+    });
+
     setUiState(prevState => ({ ...prevState, hoveredNode: node }));
-    setTreeState(prevState => ({ ...prevState, connectedNodes: findConnectedNodes(tree.getRoot(), node) }));
+    setTreeState(prevState => ({ ...prevState, connectedNodes }));
   }, [findConnectedNodes, tree, uiState.hoverEnabled, uiState.selectedNode, refs.timeout]);
 
   /**
@@ -651,7 +672,7 @@ const Flow = ({
         onNodeClick={handleNodeClick}
         onNodeMouseEnter={handleNodeMouseEnter}
         onNodeMouseLeave={handleNodeMouseLeave}
-        nodesDraggable={false}
+        nodesDraggable={true}
         proOptions={{ hideAttribution: true }}
       >
         <Controls>

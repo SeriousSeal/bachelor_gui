@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import MiniReactFlowTree from './MiniReactFlowTree';
 import { dimensionTypes } from '../utils/dimensionClassifier';
-import { TbArrowsExchange, TbArrowsShuffle } from "react-icons/tb";  // Add TbArrowsShuffle import
+import { TbArrowsExchange, TbArrowsShuffle } from "react-icons/tb";
 import useDeviceSize from '../utils/useDeviceSize';
 
 import { isEqual } from "lodash";
@@ -9,16 +9,16 @@ import { isEqual } from "lodash";
 const InfoPanel = ({
   node,
   connectedNodes = { value: [], left: null, right: null },  // Add default value
-  setConnectedNodes, // Add this prop
+  setConnectedNodes,
   onClose,
   initialPosition,
   indexSizes,
   showSizes,
   onToggleSizes,
   swapChildren,
-  recalculateTreeAndOperations, // Add this prop
-  addPermutationNode,  // Add this prop
-  removePermutationNode  // Add this prop
+  recalculateTreeAndOperations,
+  addPermutationNode,
+  removePermutationNode
 }) => {
   const { getInfoPanelDimensions } = useDeviceSize();
   const dimensions = getInfoPanelDimensions();
@@ -356,6 +356,13 @@ const InfoPanel = ({
           </div>
           <div>
             <div className="mt-4 mb-2 flex justify-center">
+              {/* Add logging before rendering MiniReactFlowTree */}
+              {console.log('MiniReactFlowTree Data:', {
+                nodeIndices: connectedNodes.value,
+                leftIndices: connectedNodes.left?.value,
+                rightIndices: connectedNodes.right?.value,
+                dimensionTypes: dimTypes
+              })}
               <MiniReactFlowTree
                 key={`${connectedNodes.value}-${connectedNodes.left?.value}-${connectedNodes.right?.value}`}
                 node={connectedNodes.value}

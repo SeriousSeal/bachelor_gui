@@ -344,6 +344,9 @@ export class Tree {
   removePermutationNode(nodeId) {
     // Special case for root node
     if (this.root && this.root.id === nodeId) {
+      if (!this.root.deleteAble) {
+        return false;
+      }
       if (this.root.left && !this.root.right) {
         this.root = this.root.left;
         return true;
@@ -354,52 +357,36 @@ export class Tree {
     const removeNode = (node) => {
       if (!node) return false;
 
-      // Check left child
       if (node.left?.id === nodeId) {
-        console.log(node)
-        if (node.left.left && !node.left.right) {  // Is it a permutation node?
-          // Create new Node instance for the left child
-          const newNode = new Node(
-            node.left.left.value,
-            node.left.left.left,
-            node.left.left.right,
-            false
-          );
-          newNode.id = node.left.left.id;
-          newNode.sizes = node.left.left.sizes;
-          node.left = newNode;
-        } else {
-          // Create new Node instance for the current node
-          const newNode = new Node(
-            node.left.value,
-            node.left.left,
-            node.left.right,
-            false
-          );
-          newNode.id = node.left.id;
-          newNode.sizes = node.left.sizes;
-          Object.assign(node, newNode);
+        if (!node.left.deleteAble) {
+          return false;
         }
+        const leftChild = node.left;
+        if (node.left.left && node.left.right) {
+          node.right = leftChild.right;
+        }
+        if (node.left.left) {
+          node.left = leftChild.left;
+        } else {
+          node.left = null;
+        }
+        node.deleteAble = false;
         return true;
       }
 
-      // Check right child
-      else if (node.right?.id === nodeId) {
-        console.log(node)
-        if (node.right.left && !node.right.right) {  // Is it a permutation node?
-          // Create new Node instance for the right child
-          const newNode = new Node(
-            node.right.left.value,
-            node.right.left.left,
-            node.right.left.right,
-            false
-          );
-          newNode.id = node.right.left.id;
-          newNode.sizes = node.right.left.sizes;
-          node.right = newNode;
-        } else {
-          throw new Error('Cannot remove non-permutation node');
+      if (node.right?.id === nodeId) {
+        if (!node.right.deleteAble) {
+          return false;
         }
+        const rightChild = node.right;
+        if (node.right.left && node.right.right) {
+          node.right = rightChild.right;
+        } else if (node.right.left) {
+          node.right = rightChild.left;
+        } else {
+          node.right = null;
+        }
+        node.deleteAble = false;
         return true;
       }
 
