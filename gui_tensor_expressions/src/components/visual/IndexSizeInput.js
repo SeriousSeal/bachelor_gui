@@ -54,30 +54,25 @@ const IndexSizeInput = ({ indexSizes, setIndexSizes, onUpdate }) => {
     const currentIndices = Object.keys(current);
     const targetIndices = Object.keys(target);
 
-    // Check only for new indices or removed indices
     return targetIndices.length !== currentIndices.length ||
       targetIndices.some(key => !currentIndices.includes(key));
   }, []);
 
-  // Update the useEffect to use the new sorting
   useEffect(() => {
     const newSortedIndices = sortIndices([...Object.keys(indexSizes)]);
     setSortedIndices(newSortedIndices);
   }, [indexSizes]);
 
-  // Modified sync effect
   useEffect(() => {
     if (isInitialMount.current) {
       isInitialMount.current = false;
       return;
     }
 
-    // Only update tempIndexSizes if indices have changed
     if (checkNeedsUpdate(tempIndexSizes, indexSizes)) {
       setTempIndexSizes(initializeTempSizes(indexSizes));
     }
 
-    // Update bulk input only when not editing
     if (!isEditing) {
       const sortedSizes = sortedIndices.map(index => indexSizes[index]);
       setBulkInput(sortedSizes.join(', '));
@@ -106,7 +101,7 @@ const IndexSizeInput = ({ indexSizes, setIndexSizes, onUpdate }) => {
         return;
       }
       setIndexSizes(tempIndexSizes);
-      onUpdate(tempIndexSizes);  // This now calls recalculateOperations
+      onUpdate(tempIndexSizes);
     } else {
       // Bulk input logic
       if (!bulkInput.trim()) {
@@ -130,7 +125,6 @@ const IndexSizeInput = ({ indexSizes, setIndexSizes, onUpdate }) => {
           newSizes[index] = numValue;
         });
 
-        // Update both indexSizes and tempIndexSizes
         setIndexSizes(newSizes);
         setTempIndexSizes(newSizes);
         onUpdate(newSizes);

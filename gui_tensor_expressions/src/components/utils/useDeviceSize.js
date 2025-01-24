@@ -1,6 +1,14 @@
 import { useState, useEffect } from 'react';
 
+/**
+ * Custom hook for responsive design that handles device size detection and layout calculations
+ * @returns {Object} Device dimensions and panel sizing functions
+ */
 const useDeviceSize = () => {
+    /**
+     * Calculates effective width and device type based on screen size and device pixel ratio
+     * @returns {Object} Object containing width and device type flags
+     */
     const getEffectiveWidth = () => {
         const dpr = window.devicePixelRatio || 1;
         const effectiveWidth = window.innerWidth;
@@ -20,6 +28,9 @@ const useDeviceSize = () => {
 
     const [dimensions, setDimensions] = useState(getEffectiveWidth());
 
+    /**
+     * Effect hook to handle window resize and orientation changes
+     */
     useEffect(() => {
         const handleResize = () => setDimensions(getEffectiveWidth());
         window.addEventListener('resize', handleResize);
@@ -30,6 +41,15 @@ const useDeviceSize = () => {
         };
     }, []);
 
+    /**
+     * Calculates dimensions for the information panel based on current device size
+     * @returns {Object} Object containing panel dimensions and styling parameters
+     * @property {number} panelWidth - Width of the info panel
+     * @property {number} fontSize - Base font size for the panel
+     * @property {number} padding - Panel padding
+     * @property {boolean} showMiniFlow - Whether to show the mini flow diagram
+     * @property {Object} miniFlow - Dimensions and styling for the mini flow diagram
+     */
     const getInfoPanelDimensions = () => {
         const { width } = dimensions;
 

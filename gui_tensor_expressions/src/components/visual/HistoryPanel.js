@@ -2,14 +2,32 @@ import React from 'react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../ui/tooltip.jsx";
 import CollapsiblePanel from '../common/CollapsiblePanel';
 
+/**
+ * Maximum length for displayed expressions before truncation
+ */
+const maxLength = 200;
+
+/**
+ * Truncates a string expression if it exceeds the specified maximum length
+ * @param {string} expression - The expression to truncate
+ * @param {number} maxLength - Maximum length before truncation
+ * @returns {string} Truncated expression with ellipsis if necessary
+ */
+const truncateExpression = (expression, maxLength = 200) => {
+  if (expression.length <= maxLength) return expression;
+  return `${expression.substring(0, maxLength)}...`;
+};
+
+/**
+ * HistoryPanel component displays a collapsible list of historical expressions
+ * with truncation and tooltip support
+ * @param {Object} props - Component props
+ * @param {Array} props.history - Array of historical expressions
+ * @param {Function} props.onSelectTree - Callback function when an expression is selected
+ * @param {Function} props.onClear - Callback function to clear the history
+ * @returns {React.Component} HistoryPanel component
+ */
 const HistoryPanel = ({ history, onSelectTree, onClear }) => {
-  const maxLength = 200;
-
-  const truncateExpression = (expression, maxLength = 200) => {
-    if (expression.length <= maxLength) return expression;
-    return `${expression.substring(0, maxLength)}...`;
-  };
-
   return (
     <CollapsiblePanel
       title="History"

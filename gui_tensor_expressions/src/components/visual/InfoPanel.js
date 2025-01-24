@@ -6,9 +6,27 @@ import useDeviceSize from '../utils/useDeviceSize';
 
 import { isEqual } from "lodash";
 
+/**
+ * InfoPanel Component
+ * Displays detailed information about tensor contractions and their dimensions
+ * 
+ * @param {Object} props
+ * @param {Object} props.node - Current node being displayed
+ * @param {Object} props.connectedNodes - Connected nodes information {value: [], left: null, right: null}
+ * @param {Function} props.setConnectedNodes - Function to update connected nodes
+ * @param {Function} props.onClose - Function to handle panel closure
+ * @param {Object} props.initialPosition - Initial position of the panel {x: number, y: number}
+ * @param {Object} props.indexSizes - Sizes of different indices
+ * @param {boolean} props.showSizes - Toggle between showing indices or sizes
+ * @param {Function} props.onToggleSizes - Function to toggle size display
+ * @param {Function} props.swapChildren - Function to swap left and right children
+ * @param {Function} props.recalculateTreeAndOperations - Function to recalculate tree layout
+ * @param {Function} props.addPermutationNode - Function to add permutation node
+ * @param {Function} props.removePermutationNode - Function to remove permutation node
+ */
 const InfoPanel = ({
   node,
-  connectedNodes = { value: [], left: null, right: null },  // Add default value
+  connectedNodes = { value: [], left: null, right: null },
   setConnectedNodes,
   onClose,
   initialPosition,
@@ -65,7 +83,7 @@ const InfoPanel = ({
     flexDirection: 'column',
     borderRadius: '8px',
     boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-    overflow: 'hidden', // Add this to prevent content overflow
+    overflow: 'hidden',
   };
 
   const titleStyle = {
@@ -102,7 +120,7 @@ const InfoPanel = ({
     margin: '0 auto',
     paddingTop: `${dimensions.padding}px`,
     position: 'relative',
-    overflow: 'hidden' // Changed from visible
+    overflow: 'hidden'
   };
 
   const tableStyle = {
@@ -139,12 +157,21 @@ const InfoPanel = ({
     color: '#333',
   };
 
+  /**
+   * Calculates the size of a dimension based on its indices
+   * @param {Array} indices - Array of index identifiers
+   * @returns {string|number} - Calculated size or '-' if no indices
+   */
   const calculateSize = (indices) => {
     if (!indices || indices.length === 0) return '-';
     return indices.reduce((acc, index) => acc * (indexSizes[index] || 1), 1);
   };
 
 
+  /**
+   * Handles mouse down event for panel dragging
+   * @param {MouseEvent|TouchEvent} e - Mouse or touch event
+   */
   const handleMouseDown = (e) => {
     // Don't initiate dragging if clicking the close button
     if (e.target.closest('button[data-close-button]')) {
@@ -161,6 +188,10 @@ const InfoPanel = ({
     }
   };
 
+  /**
+   * Handles mouse movement during panel drag
+   * @param {MouseEvent} e - Mouse move event
+   */
   const handleMouseMove = useCallback((e) => {
     if (isDragging) {
       setPosition({
@@ -170,6 +201,10 @@ const InfoPanel = ({
     }
   }, [isDragging, dragOffset]);
 
+  /**
+   * Handles touch movement during panel drag
+   * @param {TouchEvent} e - Touch move event
+   */
   const handleTouchMove = useCallback((e) => {
     if (isDragging) {
       e.preventDefault(); // Prevent scrolling while dragging
@@ -206,26 +241,40 @@ const InfoPanel = ({
   }, [isDragging, handleMouseMove, handleTouchMove]);
 
 
+  /**
+   * Handles swapping of left and right children
+   * @param {Event} e - Click event
+   */
   const handleSwap = useCallback(async (e) => {
-    console.log(node)
     e.stopPropagation();
     await swapChildren(node);
   }, [swapChildren, node]);
 
+  /**
+   * Handles addition of permutation node
+   * @param {Event} e - Click event
+   */
   const handleAddPermutation = useCallback(async (e) => {
-    console.log(node)
     e.stopPropagation();
     await addPermutationNode(node);
-    onClose(); // Add this line to close the panel
-  }, [addPermutationNode, node, onClose]); // Add onClose to dependencies
+    onClose();
+  }, [addPermutationNode, node, onClose]);
 
+  /**
+   * Handles removal of permutation node
+   * @param {Event} e - Click event
+   */
   const handleRemovePermutation = useCallback(async (e) => {
-    console.log(node)
     e.stopPropagation();
     await removePermutationNode(node);
     onClose(); // Close panel after removing
   }, [removePermutationNode, node, onClose]);
 
+  /**
+   * Handles changes in indices for nodes
+   * @param {string} nodeId - ID of the node being modified
+   * @param {Array} newIndices - New indices to be set
+   */
   const handleIndicesChange = useCallback((nodeId, newIndices) => {
     if (!setConnectedNodes) return;
 
@@ -254,7 +303,7 @@ const InfoPanel = ({
   const buttonContainerStyle = {
     display: 'flex',
     justifyContent: 'center',
-    flexWrap: 'wrap', // Allow buttons to wrap
+    flexWrap: 'wrap',
     gap: `${dimensions.padding / 2}px`,
     width: '100%',
     padding: `${dimensions.padding / 2}px`,
@@ -267,10 +316,9 @@ const InfoPanel = ({
     minWidth: 'fit-content',
   };
 
-  // Add this style object near your other style definitions
   const closeButtonStyle = {
-    width: '36px', // Fixed width for better touch target
-    height: '36px', // Fixed height for better touch target (iOS minimum)
+    width: '36px',
+    height: '36px',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
@@ -290,7 +338,7 @@ const InfoPanel = ({
       className="border border-gray-300 rounded shadow-md relative"
       style={panelStyle}
       onMouseDown={handleMouseDown}
-      onTouchStart={handleMouseDown}  // Add touch support
+      onTouchStart={handleMouseDown}
     >
       {/* Add a header container div to group title and controls */}
       <div className="flex items-center justify-between mb-2">
@@ -346,7 +394,7 @@ const InfoPanel = ({
         </div>
       </div>
 
-      {true && (  // Replace showMiniFlow with true
+      {true && (
         <div style={reactFlowPanelStyle}>
           <div style={letterContainerStyle}>
             <span style={{ ...letterStyle, color: '#a6cee3' }}>C</span>
@@ -356,13 +404,6 @@ const InfoPanel = ({
           </div>
           <div>
             <div className="mt-4 mb-2 flex justify-center">
-              {/* Add logging before rendering MiniReactFlowTree */}
-              {console.log('MiniReactFlowTree Data:', {
-                nodeIndices: connectedNodes.value,
-                leftIndices: connectedNodes.left?.value,
-                rightIndices: connectedNodes.right?.value,
-                dimensionTypes: dimTypes
-              })}
               <MiniReactFlowTree
                 key={`${connectedNodes.value}-${connectedNodes.left?.value}-${connectedNodes.right?.value}`}
                 node={connectedNodes.value}
@@ -493,6 +534,10 @@ const InfoPanel = ({
   );
 };
 
+/**
+ * Memoized InfoPanel component with custom comparison function
+ * Prevents unnecessary re-renders by comparing relevant props
+ */
 export default React.memo(InfoPanel, (prevProps, nextProps) =>
   isEqual(prevProps.connectedNodes, nextProps.connectedNodes) &&
   isEqual(prevProps.indexSizes, nextProps.indexSizes) &&
@@ -501,6 +546,6 @@ export default React.memo(InfoPanel, (prevProps, nextProps) =>
   isEqual(prevProps.node, nextProps.node) &&
   prevProps.swapChildren === nextProps.swapChildren &&
   prevProps.addPermutationNode === nextProps.addPermutationNode &&
-  prevProps.removePermutationNode === nextProps.removePermutationNode && // Add this check
+  prevProps.removePermutationNode === nextProps.removePermutationNode &&
   prevProps.setConnectedNodes === nextProps.setConnectedNodes
 );

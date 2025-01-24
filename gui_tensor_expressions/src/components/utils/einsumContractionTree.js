@@ -1,13 +1,28 @@
 import { Toast } from '../common/Toast';
 
+/**
+ * Checks if a character is a letter or number
+ * @param {string} char - The character to check
+ * @returns {boolean} True if the character is alphanumeric
+ */
 function isLetterOrNumber(char) {
   return /^[a-zA-Z0-9]$/.test(char);
 }
 
+/**
+ * Checks if a character is valid within an array context
+ * @param {string} char - The character to check
+ * @returns {boolean} True if the character is valid in array context
+ */
 function isValidArrayChar(char) {
   return /^[a-zA-Z0-9,[\]]$/.test(char);
 }
 
+/**
+ * Parses a string representation of a contraction tree
+ * @param {string} str - The string to parse
+ * @returns {Node|null} The root node of the parsed tree, or null if parsing fails
+ */
 export function parseTree(str) {
   let index = 0;
   str = str.replace(/\s/g, '');
@@ -106,6 +121,7 @@ export function parseTree(str) {
 }
 
 /**
+ * Class representing a node in the contraction tree
  * @class Node
  * @property {string} id - Unique identifier for the node
  * @property {(string[]|string)} value - Node value
@@ -131,7 +147,11 @@ export class Node {
   }
 }
 
-// Add this helper function to reconstruct Node objects
+/**
+ * Reconstructs a Node object from a plain object representation
+ * @param {Object} nodeData - Plain object containing node data
+ * @returns {Node|null} Reconstructed Node object or null
+ */
 export function reconstructNode(nodeData) {
   if (!nodeData) return null;
 
@@ -151,7 +171,10 @@ export function reconstructNode(nodeData) {
 }
 
 /**
+ * Class representing a contraction tree
  * @class Tree
+ * @property {Node|null} root - Root node of the tree
+ * @property {Object} indexSizes - Map of index labels to their sizes
  */
 export class Tree {
   static nodeIdCounter = 0;  // Keep the static counter
@@ -179,7 +202,10 @@ export class Tree {
     return this.root;
   }
 
-  // Method to update sizes for specific indices
+  /**
+   * Updates the sizes for specific indices in the tree
+   * @param {Object} newSizes - Map of index labels to their new sizes
+   */
   updateIndexSizes(newSizes) {
     this.indexSizes = { ...this.indexSizes, ...newSizes };
     this.updateNodeSizes(this.root);
@@ -197,7 +223,11 @@ export class Tree {
     this.updateNodeSizes(node.right);
   }
 
-  // Add this method to the Tree class
+  /**
+   * Converts the tree to its string representation
+   * @param {Node} [node=this.root] - Starting node (default is root)
+   * @returns {string} String representation of the tree
+   */
   treeToString(node = this.root) {
     if (!node) return '';
 
@@ -226,7 +256,10 @@ export class Tree {
     }
   }
 
-  // Add method to swap children
+  /**
+   * Swaps the children of a specified node
+   * @param {string} nodeId - ID of the node whose children should be swapped
+   */
   swapChildren(nodeId) {
     const swapNodesInTree = (node) => {
       if (!node) return false;
@@ -245,7 +278,10 @@ export class Tree {
     swapNodesInTree(this.root);
   }
 
-  // Add method to create a deep copy of the tree
+  /**
+   * Creates a deep copy of the tree
+   * @returns {Tree} New tree instance with the same structure
+   */
   clone() {
     const maxIdLastTime = Tree.nodeIdCounter;
     const newTree = new Tree();
@@ -255,6 +291,11 @@ export class Tree {
     return newTree;
   }
 
+  /**
+   * Updates indices of nodes in the tree
+   * @param {Object} updatedNodes - Object containing nodes to update
+   * @returns {boolean} True if any updates were made
+   */
   updateIndices(updatedNodes) {
     if (!updatedNodes) {
       console.warn('updateIndices called with null/undefined updatedNodes');
@@ -297,6 +338,11 @@ export class Tree {
     return false;
   }
 
+  /**
+   * Finds a node by its ID
+   * @param {string} id - ID of the node to find
+   * @returns {Node|null} Found node or null
+   */
   findNode(id) {
     const search = (node) => {
       if (!node) return null;
@@ -308,8 +354,12 @@ export class Tree {
     return search(this.root);
   }
 
+  /**
+   * Adds a permutation node to the tree
+   * @param {string} nodeId - ID of the node where to add permutation
+   * @returns {boolean} True if node was added successfully
+   */
   addPermutationNode(nodeId) {
-    console.log(Tree.nodeIdCounter)
     const addNewLeftChild = (node) => {
       if (!node) return false;
 
@@ -323,14 +373,12 @@ export class Tree {
         );
         // The Node constructor already calls Tree.getNextId()
         newLeftChild.sizes = node.sizes;
-        console.log(newLeftChild)
 
 
         // Update the current node
         node.left = newLeftChild;
         node.right = null;
         node.deleteAble = true;
-        console.log(node)
 
         return true;
       }
@@ -341,6 +389,11 @@ export class Tree {
     return addNewLeftChild(this.root);
   }
 
+  /**
+   * Removes a permutation node from the tree
+   * @param {string} nodeId - ID of the node to remove
+   * @returns {boolean} True if node was removed successfully
+   */
   removePermutationNode(nodeId) {
     // Special case for root node
     if (this.root && this.root.id === nodeId) {
@@ -396,6 +449,11 @@ export class Tree {
     return removeNode(this.root);
   }
 
+  /**
+   * Creates a string expression from selected subtree nodes
+   * @param {string[]} selectedNodeIds - Array of selected node IDs
+   * @returns {string} String representation of the selected subtree
+   */
   createSubtreeExpression(selectedNodeIds) {
     // Find the first selected node from root
     const findFirstSelectedNode = (node) => {
@@ -414,11 +472,9 @@ export class Tree {
       if (node.isLeaf()) {
         return `[${node.value.join(',')}]`;
       }
-      console.log(node)
 
       const leftStr = buildString(node.left);
       const rightStr = buildString(node.right);
-      console.log(leftStr, rightStr)
 
       // Case: only right child is highlighted
       if (!leftStr && rightStr) {

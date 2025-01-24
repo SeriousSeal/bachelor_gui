@@ -102,7 +102,6 @@ class DimensionClassifier {
                 );
             }
         });
-        console.log('primitive', primitive);
         // Process remaining right indices
         this.dimType = DimType.CB;
         this.leftK?.reverse().forEach(element => {

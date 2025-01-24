@@ -1,24 +1,36 @@
 import { hierarchy, tree } from 'd3-hierarchy';
 
+/**
+ * Builds a visualization tree for rendering expression trees using d3 hierarchy
+ * @param {Object} root - The root node of the expression tree
+ * @param {Array} faultyNodes - Array of nodes marked as faulty (default: [])
+ * @param {string} layoutOption - Layout style ('tree', 'super_wide', 'hierarchical', 'compact', 'wide')
+ * @returns {Object} Object containing nodes, edges and dimensions for the visualization
+ */
 const buildVisualizationTree = (root, faultyNodes = [], layoutOption = 'tree') => {
-  // First, count the total number of nodes to determine sizing
+  /**
+   * Recursively counts total number of nodes in the tree
+   * @param {Object} node - Current tree node
+   * @returns {number} Total count of nodes in the tree
+   */
   const countNodes = (node) => {
     if (!node) return 0;
     return 1 + countNodes(node.left) + countNodes(node.right);
   };
 
+  // Calculate total nodes for sizing
   const totalNodes = countNodes(root);
 
-  // Calculate dimensions based on total nodes
-  const width = Math.max(300, totalNodes * 50);  // Minimum 800, scales with nodes
-  const height = Math.max(125, totalNodes * 40);  // Vertical scaling
+  // Dynamic dimension calculation based on node count
+  const width = Math.max(300, totalNodes * 50);
+  const height = Math.max(125, totalNodes * 40);
 
-  // Create a hierarchy from the root
+  // Create d3 hierarchy structure from the expression tree
   const hierarchyRoot = hierarchy(root, d => {
     return [d.left, d.right].filter(child => child !== null && child !== undefined);
   });
 
-  // Select layout based on option
+  // Configure layout based on selected option
   let layout;
   switch (layoutOption) {
     case 'super_wide':
@@ -55,45 +67,45 @@ const buildVisualizationTree = (root, faultyNodes = [], layoutOption = 'tree') =
         .separation((a, b) => (a.parent === b.parent ? 1.5 : 2));
   }
 
-  // Apply the selected layout
+  // Apply layout to hierarchy
   const treeRoot = layout(hierarchyRoot);
 
-  // Convert to nodes and edges format
+  // Transform tree data into React Flow compatible format
   const nodes = treeRoot.descendants().map((d, i) => {
     const isFaulty = faultyNodes.some(faultyNode => faultyNode.id === d.data.id);
     return {
       id: d.data.id,
       type: 'custom',
       data: {
+        // Node data properties
         label: d.data.value,
         left: d.data.left?.value,
         right: d.data.right?.value,
         deleteAble: d.data.deleteAble,
-        operations: d.data.operations,  // Add operations information
-        totalOperations: d.data.totalOperations,  // Add total operations
-        operationsPercentage: d.data.operationsPercentage,  // Add operations percentage	
-        normalizedPercentage: d.data.normalizedPercentage,  // Add normalized percentage
-        depth: d.depth,  // Add depth information
+        operations: d.data.operations,
+        totalOperations: d.data.totalOperations,
+        operationsPercentage: d.data.operationsPercentage,
+        normalizedPercentage: d.data.normalizedPercentage,
+        depth: d.depth,
         isFaulty: isFaulty
       },
-      position: {
-        x: d.x,
-        y: d.y
-      }
+      position: { x: d.x, y: d.y }
     };
   });
 
+  // Create edges between nodes
   const edges = treeRoot.links().map((link, i) => ({
     id: `edge-${i}`,
-    source: link.source.data.id,  // Use ID directly instead of finding by label
-    target: link.target.data.id,  // Use ID directly instead of finding by label
+    source: link.source.data.id,
+    target: link.target.data.id,
     type: 'smoothstep'
   }));
 
+  // Return complete visualization data
   return {
     nodes,
     edges,
-    dimensions: { width, height }  // Optional: return calculated dimensions
+    dimensions: { width, height }
   };
 };
 

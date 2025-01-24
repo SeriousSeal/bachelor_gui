@@ -53,7 +53,6 @@ const CustomNode = ({ data, id }) => {
   }, [data.forceCloseTooltip]);
 
   const handleSwapIndices = (newIndices) => {
-    console.log('Swapping indices:', { id, newIndices });
     if (data.indices) {
       data.onIndicesChange?.(id, newIndices);
     }
