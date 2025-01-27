@@ -577,6 +577,7 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
   const handleOptionClick = (option) => {
     // Validate that option is one of the defined layout types
     if (Object.values(LayoutOptionType).includes(option)) {
+      console.log('Setting layout option:', option);
       setLayoutOption(option);
       if (!tree) return;
 

@@ -33,7 +33,7 @@ const buildVisualizationTree = (root, faultyNodes = [], layoutOption = 'tree') =
   // Configure layout based on selected option
   let layout;
   switch (layoutOption) {
-    case 'super_wide':
+    case 'super wide':
       layout = tree()
         .size([width * 3, height])
         .separation((a, b) => {

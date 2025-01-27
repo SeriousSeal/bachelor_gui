@@ -417,13 +417,16 @@ export class Tree {
         const leftChild = node.left;
         if (node.left.left && node.left.right) {
           node.right = leftChild.right;
-        }
-        if (node.left.left) {
           node.left = leftChild.left;
+          node.deleteAble = false;
+        }
+        else if (node.left.left) {
+          node.left = leftChild.left;
+          leftChild.left.deleteAble = false;
         } else {
           node.left = null;
+          node.deleteAble = false;
         }
-        node.deleteAble = false;
         return true;
       }
 
@@ -434,12 +437,15 @@ export class Tree {
         const rightChild = node.right;
         if (node.right.left && node.right.right) {
           node.right = rightChild.right;
+          node.left = rightChild.left;
+          node.deleteAble = false;
         } else if (node.right.left) {
           node.right = rightChild.left;
+          rightChild.left.deleteAble = false;
         } else {
           node.right = null;
+          node.deleteAble = false;
         }
-        node.deleteAble = false;
         return true;
       }
 

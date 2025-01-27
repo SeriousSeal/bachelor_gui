@@ -75,6 +75,7 @@ const NODE_TYPES = {
     const isSearchResult = data.isSearchResult;
 
     const getNodeStyle = () => {
+      console.log(data);
       if (data.isFaulty) {
         return {
           background: '#fff',
@@ -89,6 +90,12 @@ const NODE_TYPES = {
         return {
           background: '#e3f2fd',
           border: `1px solid #2196f3`
+        };
+      }
+      else if (data.deleteAble) {
+        return {
+          background: '#f5f5f5',
+          border: '1px solid rgb(77, 77, 77)'  // Fixed format: added space between 'solid' and 'rgb'
         };
       }
       return {
