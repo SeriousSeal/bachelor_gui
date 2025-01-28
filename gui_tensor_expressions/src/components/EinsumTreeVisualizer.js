@@ -773,7 +773,7 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
                       {selectedNodeOperations > 0 && selectedNode?.data?.label && (
                         <div className="text-lg mb-2">
                           <span className="font-medium">#Ops/#Bytes:&nbsp;</span>
-                          {(tensorSizes(selectedNode.data.label) / selectedNodeOperations).toLocaleString()}
+                          {(selectedNodeOperations / tensorSizes(selectedNode.data.label)).toLocaleString()}
                         </div>
                       )}
                     </CollapsiblePanel>
