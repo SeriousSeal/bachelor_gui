@@ -36,7 +36,6 @@ export const decompressData = (compressed) => {
 
         // Decompress and parse JSON
         const decompressed = pako.ungzip(bytes, { to: 'string' });
-        console.log(decompressed);
         return JSON.parse(decompressed);
     } catch (e) {
         console.error('Failed to decompress data:', e);
@@ -55,7 +54,7 @@ export const createShareableUrl = (expression, indexSizes) => {
     const compressedSizes = compressData(indexSizes);
 
     if (!compressedExpression || !compressedSizes) {
-        console.error('Failed to create shareable URL');
+        console.error('Error: Failed to create shareable URL');
         return null;
     }
 
