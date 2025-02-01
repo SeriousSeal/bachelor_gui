@@ -12,7 +12,7 @@ permissions:
   deployments: write
 
 jobs:
-  build-and-deploy:
+  test-and-deploy:
     runs-on: ubuntu-latest
     
     environment:
@@ -37,6 +37,10 @@ jobs:
           rm package-lock.json
           npm install
           npm install @babel/plugin-proposal-private-property-in-object@7.21.11
+
+      - name: Run tests
+        working-directory: ./gui_tensor_expressions
+        run: npm test -- --watchAll=false --coverage
 
       - name: Build
         working-directory: ./gui_tensor_expressions
