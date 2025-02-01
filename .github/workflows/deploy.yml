@@ -40,7 +40,8 @@ jobs:
 
       - name: Run tests
         working-directory: ./gui_tensor_expressions
-        run: npm test -- --watchAll=false --coverage
+        run: |
+          CI=true npm test -- --coverage
 
       - name: Build
         working-directory: ./gui_tensor_expressions
