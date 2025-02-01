@@ -13,7 +13,7 @@ describe('DimensionClassifier', () => {
         expect(result.primitive.cb).toContain('i');
     });
 
-    test('classifies MB dimension correctly', () => {
+    test('classifies BM dimension correctly', () => {
         const node = ['i', 'j', 'k', 'l', 'm'];
         const left = ['i', 'j', 'k'];
         const right = ['l', 'm'];
@@ -25,7 +25,7 @@ describe('DimensionClassifier', () => {
         expect(result.loop.bm).toContain('k');
     });
 
-    test('classifies NB dimension correctly', () => {
+    test('classifies BN dimension correctly', () => {
         const node = ['i', 'j', 'k', 'l', 'm'];
         const left = ['k', 'l'];
         const right = ['i', 'j', 'm'];
@@ -83,5 +83,37 @@ describe('DimensionClassifier', () => {
         expect(result.primitive.nb).toContain('o');
         expect(result.primitive.kb).toContain('k');
         expect(result.loop.bk).toContain('l');
+    });
+
+    test('complex contraction pattern 2', () => {
+        const node = ["0", "1", "2", "3"];
+        const left = ["9", "5", "6", "0", "2", "3"];
+        const right = ["1", "5", "6", "9"];
+
+        const result = dimensionTypes(node, left, right);
+        expect(result.primitive.cb).toHaveLength(0);
+        expect(result.primitive.mb).toEqual(["2", "3"]);
+        expect(result.primitive.nb).toEqual(["1"]);
+        expect(result.primitive.kb).toEqual(["9"]);
+        expect(result.loop.bc).toHaveLength(0);
+        expect(result.loop.bm).toEqual(["0"]);
+        expect(result.loop.bn).toHaveLength(0);
+        expect(result.loop.bk).toEqual(["5", "6"]);
+    });
+
+    test('complex contraction pattern 3', () => {
+        const node = ["5", "1", "2", "7"];
+        const left = ["6", "2", "7"];
+        const right = ["5", "1", "6"];
+
+        const result = dimensionTypes(node, left, right);
+        expect(result.primitive.cb).toHaveLength(0);
+        expect(result.primitive.mb).toEqual(["2", "7"]);
+        expect(result.primitive.nb).toEqual(["5", "1"]);
+        expect(result.primitive.kb).toEqual(["6"]);
+        expect(result.loop.bc).toHaveLength(0);
+        expect(result.loop.bm).toHaveLength(0);
+        expect(result.loop.bn).toHaveLength(0);
+        expect(result.loop.bk).toHaveLength(0);
     });
 });

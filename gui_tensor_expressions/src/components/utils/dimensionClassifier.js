@@ -28,13 +28,12 @@ const PrimitiveDimType = {
 
 const PRIMITIVE_DIM_ORDER = Object.values(PrimitiveDimType);
 
-class DimensionClassifier {
+class BaseDimensionClassifier {
     constructor(node, left, right) {
         this.clonedNode = cloneDeep(node);
         this.node = cloneDeep(node);
         this.left = cloneDeep(left);
         this.right = cloneDeep(right);
-        // for k dimension
         this.rightK = cloneDeep(right);
         this.leftK = cloneDeep(left);
         this.state = DimState.INITIAL;
@@ -50,93 +49,86 @@ class DimensionClassifier {
         };
     }
 
+    reverseAllArrays() {
+        Object.values(this.dimTypes.primitive).forEach(arr => arr.reverse());
+        Object.values(this.dimTypes.loop).forEach(arr => arr.reverse());
+    }
+
+    acceptDimForPrimitive(dimType) {
+        const currentTypeIndex = PRIMITIVE_DIM_ORDER.indexOf(this.dimType);
+        const newTypeIndex = PRIMITIVE_DIM_ORDER.indexOf(dimType);
+        return currentTypeIndex <= newTypeIndex;
+    }
+
+    addToPrimitive(type, element) {
+        if (!element) {
+            throw new Error('Contraction faulty');
+        }
+        if (this.processedIndices.has(element)) {
+            const error = `Index ${element} already processed`
+            throw new Error(
+                error
+            );
+        }
+        this.dimTypes.primitive[type].push(element);
+        this.processedIndices.add(element);
+    }
+
+    addToLoop(type, element) {
+        if (!element) {
+            throw new Error('Contraction faulty 1');
+        }
+        if (this.processedIndices.has(element)) {
+            const error = `Index ${element} already processed`
+            throw new Error(
+                error
+            );
+        }
+        this.dimTypes.loop[type].push(element);
+        this.processedIndices.add(element);
+    }
+
+    removeFromAll(element) {
+        this.node = this.node.filter(e => e !== element);
+        this.left = this.left.filter(e => e !== element);
+        this.right = this.right.filter(e => e !== element);
+    }
+
+    removeFromNodeAndLeft(element) {
+        this.node = this.node.filter(e => e !== element);
+        this.left = this.left.filter(e => e !== element);
+    }
+
+    removeFromNodeAndRight(element) {
+        this.node = this.node.filter(e => e !== element);
+        this.right = this.right.filter(e => e !== element);
+    }
+
+    removeFromLeftAndRight(element) {
+        this.left = this.left.filter(e => e !== element);
+        this.right = this.right.filter(e => e !== element);
+    }
+
+    classify() {
+        throw new Error('classify() must be implemented by subclass');
+    }
+}
+
+class StandardDimensionClassifier extends BaseDimensionClassifier {
     classify() {
         try {
-            this.processLastIndices();
-
-            // Second pass: Process remaining indices
+            this.processCMN();
             this.processK();
-
-            // Reverse all arrays
             this.reverseAllArrays();
         } catch (error) {
             console.error(error.message);
             Toast.show(error.message);
             return null;
         }
-
         return this.dimTypes;
     }
 
-    reverseAllArrays() {
-        // Reverse primitive arrays
-        Object.values(this.dimTypes.primitive).forEach(arr => arr.reverse());
-        // Reverse loop arrays
-        Object.values(this.dimTypes.loop).forEach(arr => arr.reverse());
-    }
-
-    processK() {
-
-        // Process remaining left indices which are in K dimension
-        this.dimType = DimType.CB;
-        const primitive = []
-        this.rightK?.reverse().forEach(element => {
-            const inC = (this.dimTypes.primitive?.cb || []).includes(element) || (this.dimTypes.loop?.bc || []).includes(element);
-            const inM = (this.dimTypes.primitive?.mb || []).includes(element) || (this.dimTypes.loop?.bm || []).includes(element);
-            const inN = (this.dimTypes.primitive?.nb || []).includes(element) || (this.dimTypes.loop?.bn || []).includes(element);
-
-            if (inC || inM || inN) {
-                this.dimType = inC ? DimType.CB : inM ? DimType.MB : DimType.NB;
-                return;
-            }
-            const occurrence = this.leftK.includes(element);
-            if (occurrence) {
-                if (this.acceptDimForPrimitive(DimType.KB)) {
-                    primitive.push(element);
-                }
-                this.dimType = DimType.KB;
-            }
-            else {
-                throw new Error(
-                    `Node ${this.clonedNode} is faulty`
-                );
-            }
-        });
-        // Process remaining right indices
-        this.dimType = DimType.CB;
-        this.leftK?.reverse().forEach(element => {
-            const inC = (this.dimTypes.primitive?.cb || []).includes(element) || (this.dimTypes.loop?.bc || []).includes(element);
-            const inM = (this.dimTypes.primitive?.mb || []).includes(element) || (this.dimTypes.loop?.bm || []).includes(element);
-            const inN = (this.dimTypes.primitive?.nb || []).includes(element) || (this.dimTypes.loop?.bn || []).includes(element);
-            const inK = (this.dimTypes.primitive?.kb || []).includes(element) || (this.dimTypes.loop?.bk || []).includes(element);
-
-            if (inC || inM || inN || inK) {
-                this.dimType = inC ? DimType.CB : inM ? DimType.MB : inN ? DimType.NB : DimType.KB;
-                return;
-            }
-
-            const occurrence = this.rightK.includes(element);
-            if (occurrence) {
-                if (this.acceptDimForPrimitive(DimType.KB) && primitive.includes(element) && primitive[0] === element) {
-                    this.addToPrimitive(DimType.KB, element);
-                    const index = primitive.indexOf(element);
-                    if (index > -1) {
-                        primitive.splice(index, 1);
-                    }
-                } else {
-                    this.addToLoop(DimType.BK, element);
-                }
-                this.dimType = DimType.KB;
-            }
-            else {
-                throw new Error(
-                    `Node ${this.clonedNode} is faulty`
-                );
-            }
-        });
-    }
-
-    processLastIndices() {
+    processCMN() {
         for (let i = this.node.length - 1; i >= 0; i--) {
             const element = this.node[i];
             const occurrenceLast = this.checkOccurrenceLast(element);
@@ -158,7 +150,6 @@ class DimensionClassifier {
                 retCode = this.handleLoopState(element);
             }
 
-
             if (retCode === 0) {
                 continue;
             } else if (retCode === 1) {
@@ -166,6 +157,91 @@ class DimensionClassifier {
                 continue;
             }
         }
+    }
+
+    processK() {
+        const primitive = this.processRightKDimensions();
+        this.processLeftKDimensions(primitive);
+    }
+
+    processRightKDimensions() {
+        this.dimType = DimType.CB;
+        const primitive = [];
+
+        this.rightK?.reverse().forEach(element => {
+            if (this.isElementInExistingDimension(element)) return;
+
+            if (this.leftK.includes(element)) {
+                this.handleRightKElement(element, primitive);
+            } else {
+                throw new Error(`Node ${this.clonedNode} is faulty`);
+            }
+        });
+
+        return primitive;
+    }
+
+    processLeftKDimensions(primitive) {
+        this.dimType = DimType.CB;
+
+        this.leftK?.reverse().forEach(element => {
+            if (this.isElementInExistingDimension(element)) return;
+
+            if (this.rightK.includes(element)) {
+                this.handleLeftKElement(element, primitive);
+            } else {
+                throw new Error(`Node ${this.clonedNode} is faulty`);
+            }
+        });
+    }
+
+    isElementInExistingDimension(element) {
+        const inC = this.isInDimension(element, 'cb', 'bc');
+        const inM = this.isInDimension(element, 'mb', 'bm');
+        const inN = this.isInDimension(element, 'nb', 'bn');
+        const inK = this.isInDimension(element, 'kb', 'bk');
+
+        if (inC || inM || inN || inK) {
+            this.dimType = this.getDimensionType(inC, inM, inN, inK);
+            return true;
+        }
+        return false;
+    }
+
+    isInDimension(element, primitive, loop) {
+        return this.dimTypes.primitive[primitive].includes(element) ||
+            this.dimTypes.loop[loop].includes(element);
+    }
+
+    getDimensionType(inC, inM, inN, inK) {
+        if (inC) return DimType.CB;
+        if (inM) return DimType.MB;
+        if (inN) return DimType.NB;
+        return DimType.KB;
+    }
+
+    handleRightKElement(element, primitive) {
+        if (this.acceptDimForPrimitive(DimType.KB)) {
+            primitive.push(element);
+        }
+        this.dimType = DimType.KB;
+    }
+
+    handleLeftKElement(element, primitive) {
+        const isPrimitiveK = this.acceptDimForPrimitive(DimType.KB) &&
+            primitive.includes(element) &&
+            primitive[0] === element;
+
+        if (isPrimitiveK) {
+            this.addToPrimitive(DimType.KB, element);
+            const index = primitive.indexOf(element);
+            if (index > -1) {
+                primitive.splice(index, 1);
+            }
+        } else {
+            this.addToLoop(DimType.BK, element);
+        }
+        this.dimType = DimType.KB;
     }
 
     handleInitialState(element, occurrence) {
@@ -258,69 +334,38 @@ class DimensionClassifier {
             rightInLeft: rightInLeft
         };
     }
-
-
-    acceptDimForPrimitive(dimType) {
-        const currentTypeIndex = PRIMITIVE_DIM_ORDER.indexOf(this.dimType);
-        const newTypeIndex = PRIMITIVE_DIM_ORDER.indexOf(dimType);
-
-        // Accept if it's the same type or comes after in the order
-        return currentTypeIndex <= newTypeIndex;
-    }
-
-    // Helper methods for dimension management
-    addToPrimitive(type, element) {
-        if (!element) {
-            throw new Error('Contraction faulty');
-        }
-        if (this.processedIndices.has(element)) {
-            const error = `Index ${element} already processed`
-            throw new Error(
-                error
-            );
-        }
-        this.dimTypes.primitive[type].push(element);
-        this.processedIndices.add(element);
-    }
-
-    addToLoop(type, element) {
-        if (!element) {
-            throw new Error('Contraction faulty 1');
-        }
-        if (this.processedIndices.has(element)) {
-            const error = `Index ${element} already processed`
-            throw new Error(
-                error
-            );
-        }
-        this.dimTypes.loop[type].push(element);
-        this.processedIndices.add(element);
-    }
-
-    removeFromAll(element) {
-        this.node = this.node.filter(e => e !== element);
-        this.left = this.left.filter(e => e !== element);
-        this.right = this.right.filter(e => e !== element);
-    }
-
-    removeFromNodeAndLeft(element) {
-        this.node = this.node.filter(e => e !== element);
-        this.left = this.left.filter(e => e !== element);
-    }
-
-    removeFromNodeAndRight(element) {
-        this.node = this.node.filter(e => e !== element);
-        this.right = this.right.filter(e => e !== element);
-    }
-
-    removeFromLeftAndRight(element) {
-        this.left = this.left.filter(e => e !== element);
-        this.right = this.right.filter(e => e !== element);
-    }
-
 }
 
-export const dimensionTypes = (node, left, right) => {
-    const classifier = new DimensionClassifier(node, left, right);
+class SimplifiedDimensionClassifier extends BaseDimensionClassifier {
+    classify() {
+        try {
+            this.processSimpleClassification();
+        } catch (error) {
+            console.error(error.message);
+            Toast.show(error.message);
+            return null;
+        }
+        return this.dimTypes;
+    }
+
+    processSimpleClassification() {
+        // Simplified classification logic
+        // Implementation here
+    }
+}
+
+export const createDimensionClassifier = (type, node, left, right) => {
+    switch (type) {
+        case 'standard':
+            return new StandardDimensionClassifier(node, left, right);
+        case 'simplified':
+            return new SimplifiedDimensionClassifier(node, left, right);
+        default:
+            return new StandardDimensionClassifier(node, left, right);
+    }
+};
+
+export const dimensionTypes = (node, left, right, type = 'standard') => {
+    const classifier = createDimensionClassifier(type, node, left, right);
     return classifier.classify();
 };
