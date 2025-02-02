@@ -23,8 +23,9 @@ import { Toast } from './common/Toast';
 // Utility imports
 import buildVisualizationTree from './utils/layout';
 import { LayoutOptionType } from './utils/constants';
-import { calculateTotalOperations } from './utils/operations';
+import { calculateNodeMetrics } from './utils/metricCalculation';
 import { createShareableUrl } from './utils/compression';
+import { formatNumber } from './utils/formatting';
 
 // Constants
 const DEFAULT_DATA_TYPE = '4';
@@ -157,7 +158,7 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
       setIndexSizes(newIndexSizes);
       tree.updateIndexSizes(newIndexSizes);
 
-      const { totalOperations, faultyNodes } = calculateTotalOperations(newIndexSizes, unorderedTree);
+      const { totalOperations, faultyNodes } = calculateNodeMetrics(newIndexSizes, unorderedTree, parseInt(dataType, 10));
       setTotalOperations(totalOperations);
 
       const { nodes, edges } = buildVisualizationTree(unorderedTree, faultyNodes, layoutOption);
@@ -195,7 +196,7 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
         resolve(tree);
       }, 0);
     });
-  }, [setNodes1, setEdges1, updateHistory, setTree, setTotalOperations, layoutOption, indexSizes]);
+  }, [setNodes1, setEdges1, updateHistory, setTree, setTotalOperations, layoutOption, indexSizes, dataType]);
 
   /**
    * Updates tree structure and recalculates operations after changes
@@ -222,7 +223,7 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
       setEinsumExpression(treeString);
 
       // Recalculate operations with the new root
-      const { totalOperations: newTotalOps, faultyNodes } = calculateTotalOperations(indexSizes, updatedRoot);
+      const { totalOperations: newTotalOps, faultyNodes } = calculateNodeMetrics(indexSizes, updatedRoot, parseInt(dataType, 10));
       setTotalOperations(newTotalOps);
 
       // Build visualization with the new root
@@ -258,7 +259,7 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
       console.error('Error updating tree:', error);
       Toast.show('Error updating indices');
     }
-  }, [tree, indexSizes, layoutOption, setNodes1, setEdges1, selectedNode, updateHistory]);
+  }, [tree, indexSizes, layoutOption, setNodes1, setEdges1, selectedNode, updateHistory, dataType]);
 
   // ============= Tree Manipulation =============
 
@@ -302,7 +303,7 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
       setEinsumExpression(treeString);
 
       // Calculate new operations
-      const { totalOperations: newTotalOps, faultyNodes } = calculateTotalOperations(indexSizes, newTree.getRoot());
+      const { totalOperations: newTotalOps, faultyNodes } = calculateNodeMetrics(indexSizes, newTree.getRoot(), parseInt(dataType, 10));
       setTotalOperations(newTotalOps);
 
       // Rebuild visualization with new tree structure
@@ -335,7 +336,7 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
       // Resolve with the updated tree
       resolve(newTree);
     });
-  }, [indexSizes, tree, setNodes1, setEdges1, updateHistory, setTree, setTotalOperations]);
+  }, [indexSizes, tree, setNodes1, setEdges1, updateHistory, setTree, setTotalOperations, dataType]);
 
   /**
    * Adds a permutation node to the tree
@@ -362,7 +363,7 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
       const treeString = newTree.treeToString();
       setEinsumExpression(treeString);
 
-      const { totalOperations: newTotalOps, faultyNodes } = calculateTotalOperations(indexSizes, newTree.getRoot());
+      const { totalOperations: newTotalOps, faultyNodes } = calculateNodeMetrics(indexSizes, newTree.getRoot(), parseInt(dataType, 10));
       setTotalOperations(newTotalOps);
 
       // Rebuild visualization with new tree structure
@@ -381,7 +382,7 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
       // Resolve with the updated tree
       resolve(newTree);
     });
-  }, [indexSizes, tree, setNodes1, setEdges1, updateHistory, setTree, setTotalOperations]);
+  }, [indexSizes, tree, setNodes1, setEdges1, updateHistory, setTree, setTotalOperations, dataType]);
 
   /**
    * Removes a permutation node from the tree
@@ -408,7 +409,7 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
       const treeString = newTree.treeToString();
       setEinsumExpression(treeString);
 
-      const { totalOperations: newTotalOps, faultyNodes } = calculateTotalOperations(indexSizes, newTree.getRoot());
+      const { totalOperations: newTotalOps, faultyNodes } = calculateNodeMetrics(indexSizes, newTree.getRoot(), parseInt(dataType, 10));
       setTotalOperations(newTotalOps);
 
       // Rebuild visualization with new tree structure
@@ -427,7 +428,7 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
       // Resolve with the updated tree
       resolve(newTree);
     });
-  }, [indexSizes, tree, setNodes1, setEdges1, updateHistory, setTree, setTotalOperations]);
+  }, [indexSizes, tree, setNodes1, setEdges1, updateHistory, setTree, setTotalOperations, dataType]);
 
   // ============= Calculations =============
 
@@ -477,7 +478,7 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
     setIndexSizes(indexSizes);
     tree.updateIndexSizes(indexSizes);
 
-    const { totalOperations, faultyNodes } = calculateTotalOperations(indexSizes, tree.getRoot());
+    const { totalOperations, faultyNodes } = calculateNodeMetrics(indexSizes, tree.getRoot(), parseInt(dataType, 10));
     setTotalOperations(totalOperations);
 
     const updatedNodes = nodes1.map(node => {
@@ -528,7 +529,7 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
       }
       return prevHistory;
     });
-  }, [nodes1, selectedNode, tree, setNodes1, edges1, findNodeInTree, updateHistory]);
+  }, [nodes1, selectedNode, tree, setNodes1, edges1, findNodeInTree, updateHistory, dataType]);
 
   // ============= Event Handlers =============
 
@@ -581,7 +582,7 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
       setLayoutOption(option);
       if (!tree) return;
 
-      const { faultyNodes } = calculateTotalOperations(indexSizes, tree.getRoot());
+      const { faultyNodes } = calculateNodeMetrics(indexSizes, tree.getRoot(), parseInt(dataType, 10));
       const { nodes, edges } = buildVisualizationTree(tree.getRoot(), faultyNodes, option);
 
       setNodes1(nodes);
@@ -620,11 +621,11 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
    */
   const formatSize = (size) => {
     if (sizeUnit === 'MiB') {
-      return `${Number((size / (1024 * 1024)).toFixed(2)).toLocaleString()} MiB`;
+      return `${formatNumber(Number((size / (1024 * 1024)).toFixed(2)))} MiB`;
     } else if (sizeUnit === 'KiB') {
-      return `${Number((size / 1024).toFixed(2)).toLocaleString()} KiB`;
+      return `${formatNumber(Number((size / 1024).toFixed(2)))} KiB`;
     } else {
-      return `${Number(size.toFixed(2)).toLocaleString()} Bytes`;
+      return `${formatNumber(Number(size.toFixed(2)))} Bytes`;
     }
   };
 
@@ -671,7 +672,7 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
     newTree.updateIndexSizes(item.indexSizes);
 
     // Calculate operations for the new tree
-    const { totalOperations: newTotalOps } = calculateTotalOperations(item.indexSizes, newTree.getRoot());
+    const { totalOperations: newTotalOps } = calculateNodeMetrics(item.indexSizes, newTree.getRoot(), parseInt(dataType, 10));
     setTotalOperations(newTotalOps);
 
     setTimeout(() => fitView('tree1'), 10);
@@ -767,13 +768,13 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
                       {selectedNodeOperations > 0 && (
                         <div className="text-lg mb-2">
                           <span className="font-medium">#Ops/#Ops per Tree:&nbsp;</span>
-                          {(selectedNodeOperations * 100 / totalOperations).toLocaleString()} %
+                          {formatNumber(selectedNodeOperations * 100 / totalOperations)} %
                         </div>
                       )}
                       {selectedNodeOperations > 0 && selectedNode?.data?.label && (
                         <div className="text-lg mb-2">
                           <span className="font-medium">#Ops/#Bytes:&nbsp;</span>
-                          {(selectedNodeOperations / tensorSizes(selectedNode.data.label)).toLocaleString()}
+                          {formatNumber(selectedNodeOperations / tensorSizes(selectedNode.data.label))}
                         </div>
                       )}
                     </CollapsiblePanel>

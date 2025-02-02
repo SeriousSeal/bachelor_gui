@@ -86,6 +86,9 @@ const buildVisualizationTree = (root, faultyNodes = [], layoutOption = 'tree') =
         totalOperations: d.data.totalOperations,
         operationsPercentage: d.data.operationsPercentage,
         normalizedPercentage: d.data.normalizedPercentage,
+        tensorSize: d.data.tensorSize,
+        normalizedSizePercentage: d.data.normalizedSizePercentage,
+        sizePercentage: d.data.sizePercentage,
         depth: d.depth,
         isFaulty: isFaulty
       },

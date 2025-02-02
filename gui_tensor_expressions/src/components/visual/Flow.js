@@ -21,7 +21,8 @@ import {
   TbEyeCheck,
   TbPercentage,
   TbHighlight,
-  TbCheck
+  TbCheck,
+  TbBox
 } from "react-icons/tb";
 
 /**
@@ -30,6 +31,7 @@ import {
 import { LayoutOptionType } from '../utils/constants';
 import { createShareableUrl } from '../utils/compression';
 import { scaleLinear } from 'd3-scale';
+import { formatNumber } from '../utils/formatting';
 
 /* ====================== Utility Functions ====================== */
 
@@ -63,19 +65,24 @@ const NODE_TYPES = {
       const maxWidth = 130;
       const textWidth = displayLabel.length * 8;
       const nodeWidth = Math.min(Math.max(textWidth, minWidth), maxWidth) + 8;
+      let percentage = null;
+      if (data.showOperations) {
+        if (data.metricType === 'operations' && data.operationsPercentage !== undefined) {
+          percentage = `${formatNumber(data.operationsPercentage)}%`;
+        } else if (data.metricType === 'tensorSize' && data.sizePercentage !== undefined) {
+          percentage = `${formatNumber(data.sizePercentage)}%`;
+        }
+      }
 
-      const operationPercentage = data.showOperations && data.operationsPercentage
-        ? `${data.operationsPercentage.toLocaleString()}%`
-        : null;
 
-      return { displayLabel, nodeWidth, operationPercentage };
-    }, [data.label, data.showOperations, data.operationsPercentage]);
+
+      return { displayLabel, nodeWidth, percentage };
+    }, [data]);
 
     const isHighlighted = data.isHighlighted;
     const isSearchResult = data.isSearchResult;
 
     const getNodeStyle = () => {
-      console.log(data);
       if (data.isFaulty) {
         return {
           background: '#fff',
@@ -112,7 +119,7 @@ const NODE_TYPES = {
         opacity: (isHighlighted || isSearchResult) ? 1 : 0.7,
         borderRadius: '8px',
         width: `${displayData.nodeWidth}px`,
-        height: displayData.operationPercentage ? '60px' : '40px',
+        height: displayData.percentage ? '60px' : '40px',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'center',
@@ -131,13 +138,13 @@ const NODE_TYPES = {
         }}>
           {displayData.displayLabel}
         </div>
-        {displayData.operationPercentage && (
+        {displayData.percentage && (
           <div style={{
             fontSize: '12px',
             color: '#666',
             marginTop: '2px'
           }}>
-            {displayData.operationPercentage}
+            {displayData.percentage}
           </div>
         )}
         <Handle
@@ -215,7 +222,8 @@ const Flow = ({
     showOperations: false,
     showSizes: false,
     hoverEnabled: false,
-    highlightMode: false
+    highlightMode: false,
+    metricType: 'operations'
   });
 
   /**
@@ -262,6 +270,7 @@ const Flow = ({
       data: {
         ...node.data,
         showOperations: uiState.showOperations,
+        metricType: uiState.metricType,
         isHighlighted: searchState.highlightedNodes.has(node.id),
         isSearchResult: searchState.searchedNodes.has(node.id)
       }
@@ -277,8 +286,10 @@ const Flow = ({
       };
 
       const sourceNode = nodes.find(n => n.id === edge.source);
-      if (sourceNode?.data?.operationsPercentage) {
-        const percentage = (sourceNode.data.operations / sourceNode.data.totalOperations) * 100;
+      if (sourceNode?.data) {
+        const percentage = uiState.metricType === 'operations' ?
+          (sourceNode.data.operations / sourceNode.data.totalOperations) * 100 :
+          sourceNode.data.sizePercentage;
         return {
           ...defaultEdgeStyle,
           style: {
@@ -297,7 +308,7 @@ const Flow = ({
       augmentedNodes: modifiedNodes,
       augmentedEdges: modifiedEdges
     };
-  }, [nodes, edges, uiState.showOperations, searchState.highlightedNodes, searchState.searchedNodes]);
+  }, [nodes, edges, uiState.showOperations, searchState.highlightedNodes, searchState.searchedNodes, uiState.metricType]);
 
   /* === Tree Operations === */
 
@@ -409,6 +420,7 @@ const Flow = ({
    * @param {Object} node - Clicked node
    */
   const handleNodeClick = useCallback((event, node) => {
+    console.log(node)
     if (uiState.highlightMode) {
       event.preventDefault();
       onHighlightNode(node);
@@ -455,13 +467,11 @@ const Flow = ({
    * Toggles the visibility of operation percentages
    */
   const toggleOperations = useCallback(() => {
-    if (refs.timeout.current) {
-      clearTimeout(refs.timeout.current);
-    }
-    refs.timeout.current = setTimeout(() => {
-      setUiState(prevState => ({ ...prevState, showOperations: !prevState.showOperations }));
-    }, 100);
-  }, [refs.timeout]);
+    setUiState(prevState => ({
+      ...prevState,
+      showOperations: !prevState.showOperations
+    }));
+  }, []);
 
   /**
    * Toggles the hover behavior
@@ -639,6 +649,14 @@ const Flow = ({
     setUiState(prevState => ({ ...prevState, showSizes: !prevState.showSizes }));
   }, []);
 
+  const toggleMetricType = useCallback(() => {
+    setUiState(prevState => ({
+      ...prevState,
+      showOperations: true, // Ensure percentages are shown when switching metrics
+      metricType: prevState.metricType === 'operations' ? 'tensorSize' : 'operations'
+    }));
+  }, []);
+
   /* === Render === */
   const activeNode = uiState.selectedNode || uiState.hoveredNode;
 
@@ -677,28 +695,43 @@ const Flow = ({
           >
             {uiState.hoverEnabled ? <TbEyeCheck /> : <TbEyeCancel />}
           </ControlButton>
-          <ControlButton
-            onClick={toggleOperations}
-            className={`operations - toggle ${uiState.showOperations ? 'active' : ''} `}
-            title={uiState.showOperations ? 'Hide Operation Percentages' : 'Show Operation Percentages'}
-          >
-            <TbPercentage />
-          </ControlButton>
-          <ControlButton
-            onClick={toggleHighlightMode}
-            className={`highlight-mode ${uiState.highlightMode ? 'active' : ''}`}
-            title={uiState.highlightMode ? 'Exit Highlight Mode' : 'Enter Highlight Mode'}
-          >
-            <TbHighlight />
-          </ControlButton>
-          {uiState.highlightMode && (
+          <div className="flex items-center">
             <ControlButton
-              onClick={handleCreateHighlightShare}
-              title="Create Share URL from Highlighted Nodes"
+              onClick={toggleMetricType}
+              className={`metric-toggle ${uiState.metricType === 'tensorSize' ? 'active' : ''}`}
+              title={`Show ${uiState.metricType === 'tensorSize' ? 'Operation' : 'Memory'} Percentages`}
             >
-              <TbCheck />
+              {uiState.metricType === 'tensorSize' ? <TbBox /> : <TbPercentage />}
             </ControlButton>
-          )}
+            {uiState.showOperations && (
+              <ControlButton
+                onClick={toggleOperations}
+                className={`operations-toggle ${uiState.showOperations ? 'active' : ''}`}
+                title={uiState.showOperations ? 'Hide Percentages' : 'Show Percentages'}
+              >
+                {uiState.showOperations ? <TbEyeCheck /> : <TbEyeCancel />}
+              </ControlButton>
+            )}
+          </div>
+          <div className="flex items-center">
+            <ControlButton
+              onClick={toggleHighlightMode}
+              className={`highlight-mode ${uiState.highlightMode ? 'active' : ''}`}
+              title={uiState.highlightMode ? 'Exit Highlight Mode' : 'Enter Highlight Mode'}
+            >
+              <TbHighlight />
+            </ControlButton>
+            {uiState.highlightMode && (
+              <ControlButton
+                onClick={handleCreateHighlightShare}
+                title="Create Share URL from Highlighted Nodes"
+              >
+                <TbCheck />
+              </ControlButton>
+
+            )}
+          </div>
+
         </Controls>
         <Background variant="dots" gap={12} size={1} />
         {!uiState.highlightMode && activeNode && (
@@ -770,7 +803,7 @@ const Flow = ({
           </div>
         </Panel>
       </ReactFlow>
-    </div>
+    </div >
   );
 };
 

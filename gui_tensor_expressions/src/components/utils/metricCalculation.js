@@ -39,9 +39,38 @@ export const calculateOperations = (dimTypes, indexSizes) => {
  * @param {Object} tree - The expression tree to analyze
  * @returns {Object} - Object containing total operations and any faulty nodes
  */
-export const calculateTotalOperations = (indexSizes, tree) => {
+export const calculateNodeMetrics = (indexSizes, tree, dataTypeSize) => {
     let totalOperations = 0;
     let faultyNodes = [];
+
+    let totalTensorSize = 0;
+    let maxTensorSize = 0;
+    let minTensorSize = Infinity;
+
+    const calculateNodeSizes = (node) => {
+        if (!node) return;
+
+        // Calculate tensor size
+        const nodeSize = node.value.reduce((size, index) =>
+            size * (indexSizes[index] || 1), 1
+        ) * dataTypeSize;
+
+        node.tensorSize = nodeSize;
+        totalTensorSize += nodeSize;
+        maxTensorSize = Math.max(maxTensorSize, nodeSize);
+        minTensorSize = Math.min(minTensorSize, nodeSize);
+
+        if (node.left && node.right) {
+            const dimtypes = dimensionTypes(node.value, node.left.value, node.right.value);
+            if (dimtypes) {
+                node.operations = calculateOperations(dimtypes, indexSizes);
+                totalOperations += node.operations;
+            }
+        }
+
+        calculateNodeSizes(node.left);
+        calculateNodeSizes(node.right);
+    };
 
     /**
      * Resets all operation-related properties in the tree
@@ -161,6 +190,24 @@ export const calculateTotalOperations = (indexSizes, tree) => {
         }
     };
 
+    calculateNodeSizes(tree);
+
+    const addPercentages = (node) => {
+        if (!node) return;
+
+        // Raw percentage of total
+        node.sizePercentage = (node.tensorSize / totalTensorSize) * 100;
+
+        // Normalized percentage (0-100 scale)
+        node.normalizedSizePercentage =
+            ((node.tensorSize - minTensorSize) / (maxTensorSize - minTensorSize)) * 100;
+
+        addPercentages(node.left);
+        addPercentages(node.right);
+    };
+
+    addPercentages(tree);
+
     calculateTotal(tree);
     if (faultyNodes.length > 0) {
         totalOperations = 0;
@@ -177,6 +224,7 @@ export const calculateTotalOperations = (indexSizes, tree) => {
     const maxPercentage = Math.max(...percentages);
 
     addNormalizedPercentages(tree, minPercentage, maxPercentage);
+    console.log(tree);
 
     return { totalOperations, faultyNodes };
 };
