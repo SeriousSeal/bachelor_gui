@@ -42,6 +42,7 @@ export const calculateOperations = (dimTypes, indexSizes) => {
 export const calculateNodeMetrics = (indexSizes, tree, dataTypeSize) => {
     let totalOperations = 0;
     let faultyNodes = [];
+    let binaryNodes = []; // Added: Collect binary operation nodes
 
     let totalTensorSize = 0;
     let maxTensorSize = 0;
@@ -59,14 +60,6 @@ export const calculateNodeMetrics = (indexSizes, tree, dataTypeSize) => {
         totalTensorSize += nodeSize;
         maxTensorSize = Math.max(maxTensorSize, nodeSize);
         minTensorSize = Math.min(minTensorSize, nodeSize);
-
-        if (node.left && node.right) {
-            const dimtypes = dimensionTypes(node.value, node.left.value, node.right.value);
-            if (dimtypes) {
-                node.operations = calculateOperations(dimtypes, indexSizes);
-                totalOperations += node.operations;
-            }
-        }
 
         calculateNodeSizes(node.left);
         calculateNodeSizes(node.right);
@@ -97,65 +90,33 @@ export const calculateNodeMetrics = (indexSizes, tree, dataTypeSize) => {
      * @param {Object} node - Current tree node
      * @returns {number} - Returns 1 if node is faulty, 0 otherwise
      */
-    const calculateTotal = (node) => {
+    const calculateTotalOperations = (node) => {
         if (node.left && node.right) {
             const dimtypes = dimensionTypes(node.value, node.left.value, node.right.value);
             if (dimtypes === null) {
                 faultyNodes.push(node);
-                calculateTotal(node.left);
-                calculateTotal(node.right);
+                calculateTotalOperations(node.left);
+                calculateTotalOperations(node.right);
                 return 1;
             }
             const operations = calculateOperations(dimtypes, indexSizes);
             node.operations = operations;
             totalOperations += operations;
+            binaryNodes.push(node); // Added: push binary nodes
 
-            if (calculateTotal(node.left) === 1 || calculateTotal(node.right) === 1) {
+            if (calculateTotalOperations(node.left) === 1 || calculateTotalOperations(node.right) === 1) {
                 return 1;
             }
         }
         else if (node.left && !node.right) {
             node.operations = 0;
-            calculateTotal(node.left);
+            calculateTotalOperations(node.left);
         }
         return 0;
     };
 
-    /**
-     * Calculates raw operation percentages for each node
-     * @param {Object} node - Current tree node
-     */
-    const calculateRawPercentages = (node) => {
-        if (node.left && node.right) {
-            node.operationsPercentage = (node.operations / totalOperations) * 100;
-            node.totalOperations = totalOperations;
-            calculateRawPercentages(node.left);
-            calculateRawPercentages(node.right);
-        }
-        else if (node.left && !node.right) {
-            calculateRawPercentages(node.left);
-            node.totalOperations = totalOperations;
-            node.operationsPercentage = 0;
-        }
-    };
-
-    /**
-     * Finds minimum and maximum operation percentages in the tree
-     * @param {Object} node - Current tree node
-     * @param {Array} percentages - Array to collect percentages
-     * @returns {Array} - Array of all operation percentages
-     */
-    const findMinMaxPercentages = (node, percentages = []) => {
-        if (node.left && node.right) {
-            percentages.push(node.operationsPercentage);
-            findMinMaxPercentages(node.left, percentages);
-            findMinMaxPercentages(node.right, percentages);
-        }
-        else if (node.left && !node.right) {
-            findMinMaxPercentages(node.left, percentages);
-        }
-        return percentages;
-    };
+    // Remove recursive calculation of raw percentages:
+    // const calculateRawPercentages = (node) => { ... };
 
     /**
      * Normalizes a percentage value between 0 and 100
@@ -208,7 +169,7 @@ export const calculateNodeMetrics = (indexSizes, tree, dataTypeSize) => {
 
     addPercentages(tree);
 
-    calculateTotal(tree);
+    calculateTotalOperations(tree);
     if (faultyNodes.length > 0) {
         totalOperations = 0;
         resetTreeOperations(tree);
@@ -217,9 +178,13 @@ export const calculateNodeMetrics = (indexSizes, tree, dataTypeSize) => {
         return { totalOperations, faultyNodes };
     }
     tree.totalOperations = totalOperations;
-    calculateRawPercentages(tree);
 
-    const percentages = findMinMaxPercentages(tree);
+    binaryNodes.forEach(node => {
+        node.operationsPercentage = (node.operations / totalOperations) * 100;
+        node.totalOperations = totalOperations;
+    });
+
+    const percentages = binaryNodes.map(node => node.operationsPercentage);
     const minPercentage = Math.min(...percentages);
     const maxPercentage = Math.max(...percentages);
 

@@ -480,6 +480,7 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
 
     const { totalOperations, faultyNodes } = calculateNodeMetrics(indexSizes, tree.getRoot(), parseInt(dataType, 10));
     setTotalOperations(totalOperations);
+    console.log(tree.getRoot());
 
     const updatedNodes = nodes1.map(node => {
       const isFaulty = faultyNodes.some(faultyNode => faultyNode.id === node.id);
@@ -490,10 +491,8 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
             ...node,
             data: {
               ...node.data,
-              operations: nodeInTree.operations,
-              operationsPercentage: nodeInTree.operationsPercentage,
-              totalOperations: nodeInTree.totalOperations,
-              isFaulty: isFaulty
+              isFaulty: isFaulty,
+              ...nodeInTree,
             }
           };
         }
@@ -722,7 +721,7 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
                     swapChildren={swapChildren}
                     recalculateTreeAndOperations={recalculateTreeAndOperations}
                     addPermutationNode={addPermutationNode}
-                    removePermutationNode={removePermutationNode}  // Add this prop
+                    removePermutationNode={removePermutationNode}
                   />
                 </ReactFlowProvider>
               </Panel>

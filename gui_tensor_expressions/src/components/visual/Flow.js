@@ -77,7 +77,7 @@ const NODE_TYPES = {
 
 
       return { displayLabel, nodeWidth, percentage };
-    }, [data]);
+    }, [data.label, data.showOperations, data.operationsPercentage, data.sizePercentage, data.metricType]);
 
     const isHighlighted = data.isHighlighted;
     const isSearchResult = data.isSearchResult;
