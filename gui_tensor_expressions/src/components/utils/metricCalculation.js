@@ -189,7 +189,6 @@ export const calculateNodeMetrics = (indexSizes, tree, dataTypeSize) => {
     const maxPercentage = Math.max(...percentages);
 
     addNormalizedPercentages(tree, minPercentage, maxPercentage);
-    console.log(tree);
 
     return { totalOperations, faultyNodes };
 };

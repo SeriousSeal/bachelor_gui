@@ -420,7 +420,6 @@ const Flow = ({
    * @param {Object} node - Clicked node
    */
   const handleNodeClick = useCallback((event, node) => {
-    console.log(node)
     if (uiState.highlightMode) {
       event.preventDefault();
       onHighlightNode(node);
