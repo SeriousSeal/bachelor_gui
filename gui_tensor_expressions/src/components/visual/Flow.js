@@ -99,12 +99,6 @@ const NODE_TYPES = {
           border: `1px solid #2196f3`
         };
       }
-      else if (data.deleteAble) {
-        return {
-          background: '#f5f5f5',
-          border: '1px solid rgb(77, 77, 77)'  // Fixed format: added space between 'solid' and 'rgb'
-        };
-      }
       return {
         background: '#fff',
         border: '1px solid #777'
