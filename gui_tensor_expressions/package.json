@@ -1,7 +1,7 @@
 {
   "name": "gui_tensor_expressions",
   "version": "0.1.0",
-  "homepage": "https://seriousseal.github.io/bachelor_gui",
+  "homepage": "https://seriousseal.github.io/web_app_tensor_expressions",
   "private": true,
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
