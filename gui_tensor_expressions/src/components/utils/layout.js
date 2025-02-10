@@ -23,7 +23,7 @@ const buildVisualizationTree = (root, faultyNodes = [], layoutOption = 'tree') =
 
   // Dynamic dimension calculation based on node count
   const width = Math.max(300, totalNodes * 50);
-  const height = Math.max(125, totalNodes * 40);
+  const height = Math.max(150, totalNodes * 40);
 
   // Create d3 hierarchy structure from the expression tree
   const hierarchyRoot = hierarchy(root, d => {
