@@ -20,12 +20,12 @@ sudo apt-get install -y nodejs
 # Verify installation
 node -v && npm -v
 ```
-
+https://seriousseal.github.io/web_app_tensor_expressions/
 ### 2. Set Up Application
 ```bash
 # Clone repository (if not already cloned)
-git clone https://github.com/SeriousSeal/bachelor_gui.git
-cd bachelor_gui/gui_tensor_expressions
+git clone https://github.com/SeriousSeal/web_app_tensor_expressions.git
+cd web_app_tensor_expressions/gui_tensor_expressions
 
 # Install dependencies
 npm install
@@ -39,7 +39,7 @@ npm start
 ### 1. Modify Configuration
 ```diff
 # In package.json
-- "homepage": "https://seriousseal.github.io/bachelor_gui"
+- "homepage": "https://seriousseal.github.io/web_app_tensor_expressions"
 + "homepage": "/"
 ```
 
@@ -55,7 +55,7 @@ docker-compose up
 ```
 
 ## Verification
-- Local development: Access via `http://localhost:3000/bachelor_gui`
+- Local development: Access via `http://localhost:3000/web_app_tensor_expressions`
 - Docker: Access via `http://localhost:80`
 - Expected: Interactive GUI with tensor visualization components
 
