@@ -282,8 +282,8 @@ const Flow = ({
       const sourceNode = nodes.find(n => n.id === edge.source);
       if (sourceNode?.data) {
         const percentage = uiState.metricType === 'operations' ?
-          (sourceNode.data.operations / sourceNode.data.totalOperations) * 100 :
-          sourceNode.data.sizePercentage;
+          sourceNode.data.normalizedPercentage :
+          sourceNode.data.normalizedSizePercentage;
         return {
           ...defaultEdgeStyle,
           style: {
