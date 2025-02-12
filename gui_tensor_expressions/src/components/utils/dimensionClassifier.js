@@ -183,7 +183,6 @@ class StandardDimensionClassifier extends BaseDimensionClassifier {
 
     processLeftKDimensions(primitive) {
         this.dimType = DimType.CB;
-
         this.leftK?.reverse().forEach(element => {
             if (this.isElementInExistingDimension(element)) return;
 
@@ -231,7 +230,6 @@ class StandardDimensionClassifier extends BaseDimensionClassifier {
         const isPrimitiveK = this.acceptDimForPrimitive(DimType.KB) &&
             primitive.includes(element) &&
             primitive[0] === element;
-
         if (isPrimitiveK) {
             this.addToPrimitive(DimType.KB, element);
             const index = primitive.indexOf(element);
@@ -258,14 +256,6 @@ class StandardDimensionClassifier extends BaseDimensionClassifier {
             this.state = DimState.PRIMITIVE;
             this.removeFromNodeAndLeft(element);
             return 0;
-        } else if (occurrence.leftEqualsRight && this.acceptDimForPrimitive(DimType.KB) && !this.node.includes(this.left[this.left.length - 1])) {
-            this.dimType = DimType.KB;
-            this.state = DimState.PRIMITIVE;
-            const lastLeft = this.left[this.left.length - 1];
-            this.addToPrimitive(DimType.KB, lastLeft);
-            this.state = DimState.PRIMITIVE;
-            this.removeFromLeftAndRight(lastLeft);
-            return 1;
         } else if (occurrence.inNodeAndRight && this.acceptDimForPrimitive(DimType.NB) && !this.left.includes(element)) {
             this.dimType = DimType.NB;
             this.state = DimState.PRIMITIVE;
@@ -310,7 +300,6 @@ class StandardDimensionClassifier extends BaseDimensionClassifier {
         const inLeft = this.left?.at(-1) === element || false;
         const inRight = this.right?.at(-1) === element || false;
         const leftEqualsRight = this.left.length > 0 && this.right.length > 0 && this.left[this.left.length - 1] === this.right[this.right.length - 1];
-
         return {
             inAll: inNode && inLeft && inRight,
             inNodeAndLeft: inNode && inLeft && !inRight,
