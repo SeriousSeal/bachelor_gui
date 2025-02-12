@@ -32,6 +32,38 @@ export const calculateOperations = (dimTypes, indexSizes) => {
     return 2 * cmn * k - cmn;
 };
 
+export const caluclateByteAccesses = (dimTypes, indexSizes) => {
+    const calculateProduct = (dimensions) => {
+        return dimensions.reduce((product, index) => {
+            return product * (indexSizes[index] || 1);
+        }, 1);
+    };
+
+    // Calculate CMN (dimensions not involving k)
+    let cmn = 1;
+    // Common dimensions (c)
+    const cPrimitive = calculateProduct(dimTypes.primitive.cb || []);
+    const cLoop = calculateProduct(dimTypes.loop.bc || []);
+    // M dimensions
+    const mPrimitive = calculateProduct(dimTypes.primitive.mb || []);
+    const mLoop = calculateProduct(dimTypes.loop.bm || []);
+    // N dimensions
+    const nPrimitive = calculateProduct(dimTypes.primitive.nb || []);
+    const nLoop = calculateProduct(dimTypes.loop.bn || []);
+    cmn = (cPrimitive * cLoop) * (mPrimitive * mLoop) * (nPrimitive * nLoop);
+
+    // Calculate CNK (dimensions involving n and k)
+    let cnk = 1;
+    const kPrimitive = calculateProduct(dimTypes.primitive.kb || []);
+    const kLoop = calculateProduct(dimTypes.loop.bk || []);
+    cnk = (nPrimitive * nLoop) * (kPrimitive * kLoop);
+
+    // Calculate CMK (dimensions involving m and k)
+    let cmk = 1;
+    cmk = (mPrimitive * mLoop) * (kPrimitive * kLoop);
+    return cmn + cnk + cmk;
+};
+
 /**
  * Calculates the total number of operations for an entire expression tree
  * and adds operation statistics to each node
@@ -90,27 +122,29 @@ export const calculateNodeMetrics = (indexSizes, tree, dataTypeSize) => {
      * @param {Object} node - Current tree node
      * @returns {number} - Returns 1 if node is faulty, 0 otherwise
      */
-    const calculateTotalOperations = (node) => {
+    const calculateOpsAndByteAccess = (node) => {
         if (node.left && node.right) {
             const dimtypes = dimensionTypes(node.value, node.left.value, node.right.value);
             if (dimtypes === null) {
                 faultyNodes.push(node);
-                calculateTotalOperations(node.left);
-                calculateTotalOperations(node.right);
+                calculateOpsAndByteAccess(node.left);
+                calculateOpsAndByteAccess(node.right);
                 return 1;
             }
             const operations = calculateOperations(dimtypes, indexSizes);
+            const byteAccesses = caluclateByteAccesses(dimtypes, indexSizes);
+            node.byteAccesses = byteAccesses;
             node.operations = operations;
             totalOperations += operations;
             binaryNodes.push(node); // Added: push binary nodes
 
-            if (calculateTotalOperations(node.left) === 1 || calculateTotalOperations(node.right) === 1) {
+            if (calculateOpsAndByteAccess(node.left) === 1 || calculateOpsAndByteAccess(node.right) === 1) {
                 return 1;
             }
         }
         else if (node.left && !node.right) {
             node.operations = 0;
-            calculateTotalOperations(node.left);
+            calculateOpsAndByteAccess(node.left);
         }
         return 0;
     };
@@ -169,7 +203,7 @@ export const calculateNodeMetrics = (indexSizes, tree, dataTypeSize) => {
 
     addPercentages(tree);
 
-    calculateTotalOperations(tree);
+    calculateOpsAndByteAccess(tree);
     if (faultyNodes.length > 0) {
         totalOperations = 0;
         resetTreeOperations(tree);

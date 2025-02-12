@@ -451,6 +451,11 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
     return size;
   };
 
+  const calcByteAccess = (bytes) => {
+    let size = dataType === '4' ? 4 : 8;
+    return size * bytes;
+  };
+
   /**
    * Calculates strides for given indices
    * @param {Array} indices - Array of indices
@@ -772,7 +777,9 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
                       {selectedNodeOperations > 0 && selectedNode?.data?.label && (
                         <div className="text-lg mb-2">
                           <span className="font-medium">#Ops/#Bytes:&nbsp;</span>
-                          {formatNumber(selectedNodeOperations / tensorSizes(selectedNode.data.label))}
+                          {(() => {
+                            return formatNumber(selectedNodeOperations / calcByteAccess(selectedNode.data.byteAccesses));
+                          })()}
                         </div>
                       )}
                     </CollapsiblePanel>

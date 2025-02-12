@@ -73,24 +73,17 @@ const buildVisualizationTree = (root, faultyNodes = [], layoutOption = 'tree') =
   // Transform tree data into React Flow compatible format
   const nodes = treeRoot.descendants().map((d, i) => {
     const isFaulty = faultyNodes.some(faultyNode => faultyNode.id === d.data.id);
+    const { left, right, value, ...restData } = d.data;
     return {
       id: d.data.id,
       type: 'custom',
       data: {
-        // Node data properties
-        label: d.data.value,
-        left: d.data.left?.value,
-        right: d.data.right?.value,
-        deleteAble: d.data.deleteAble,
-        operations: d.data.operations,
-        totalOperations: d.data.totalOperations,
-        operationsPercentage: d.data.operationsPercentage,
-        normalizedPercentage: d.data.normalizedPercentage,
-        tensorSize: d.data.tensorSize,
-        normalizedSizePercentage: d.data.normalizedSizePercentage,
-        sizePercentage: d.data.sizePercentage,
+        ...restData,
+        label: value,
+        left: left?.value,
+        right: right?.value,
         depth: d.depth,
-        isFaulty: isFaulty
+        isFaulty
       },
       position: { x: d.x, y: d.y }
     };
