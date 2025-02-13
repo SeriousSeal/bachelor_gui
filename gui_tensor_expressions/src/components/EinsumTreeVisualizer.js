@@ -488,7 +488,7 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
 
     const updatedNodes = nodes1.map(node => {
       const isFaulty = faultyNodes.some(faultyNode => faultyNode.id === node.id);
-      if (node.data && node.data.left && node.data.right) {
+      if (node.data) {
         const nodeInTree = findNodeInTree(tree.getRoot(), node.id);
         if (nodeInTree) {
           return {
