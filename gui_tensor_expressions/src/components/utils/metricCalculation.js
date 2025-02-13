@@ -1,30 +1,30 @@
-/**
- * Import dimension type classification utilities
- */
 import { dimensionTypes } from './dimensionClassifier.js';
 
 /**
- * Calculates the number of operations for a given set of dimension types and index sizes
- * @param {Object} dimTypes - Object containing dimension types (kb, bk, etc.)
+ * Helper function to calculate the product of index sizes for given dimensions
+ * @param {string[]} dimensions - Array of dimension indices
  * @param {Object} indexSizes - Object containing the sizes of each index
- * @returns {number} - Number of operations required
+ * @param {number} initialValue - Initial value for multiplication
+ * @returns {number} - Product of all dimension sizes
+ */
+const calculateDimensionProduct = (dimensions = [], indexSizes, initialValue = 1) => {
+    return dimensions.reduce((product, index) =>
+        product * (indexSizes[index] || 1), initialValue);
+};
+
+/**
+ * Calculates operation count for matrix multiplication-like operations
  */
 export const calculateOperations = (dimTypes, indexSizes) => {
     let cmn = 1;
     let k = 1;
 
-    const calculateProduct = (dimensions, multiplier) => {
-        return dimensions.reduce((product, index) => {
-            return product * (indexSizes[index] || 1);
-        }, multiplier);
-    };
-
     for (const key in dimTypes) {
         for (const dim in dimTypes[key]) {
             if (dim === 'kb' || dim === 'bk') {
-                k = calculateProduct(dimTypes[key][dim], k);
+                k = calculateDimensionProduct(dimTypes[key][dim], indexSizes, k);
             } else {
-                cmn = calculateProduct(dimTypes[key][dim], cmn);
+                cmn = calculateDimensionProduct(dimTypes[key][dim], indexSizes, cmn);
             }
         }
     }
@@ -32,69 +32,72 @@ export const calculateOperations = (dimTypes, indexSizes) => {
     return 2 * cmn * k - cmn;
 };
 
+/**
+ * Calculates memory access patterns for tensor operations
+ */
 export const caluclateByteAccesses = (dimTypes, indexSizes) => {
-    const calculateProduct = (dimensions) => {
-        return dimensions.reduce((product, index) => {
-            return product * (indexSizes[index] || 1);
-        }, 1);
-    };
+    // Calculate dimension products for each type
+    const calc = (type, dim) => calculateDimensionProduct(dimTypes[type][dim] || [], indexSizes);
 
-    // Calculate CMN (dimensions not involving k)
-    let cmn = 1;
-    // Common dimensions (c)
-    const cPrimitive = calculateProduct(dimTypes.primitive.cb || []);
-    const cLoop = calculateProduct(dimTypes.loop.bc || []);
+    // Common dimensions
+    const cDim = calc('primitive', 'cb') * calc('loop', 'bc');
     // M dimensions
-    const mPrimitive = calculateProduct(dimTypes.primitive.mb || []);
-    const mLoop = calculateProduct(dimTypes.loop.bm || []);
+    const mDim = calc('primitive', 'mb') * calc('loop', 'bm');
     // N dimensions
-    const nPrimitive = calculateProduct(dimTypes.primitive.nb || []);
-    const nLoop = calculateProduct(dimTypes.loop.bn || []);
-    cmn = (cPrimitive * cLoop) * (mPrimitive * mLoop) * (nPrimitive * nLoop);
+    const nDim = calc('primitive', 'nb') * calc('loop', 'bn');
+    // K dimensions
+    const kDim = calc('primitive', 'kb') * calc('loop', 'bk');
 
-    // Calculate CNK (dimensions involving n and k)
-    let cnk = 1;
-    const kPrimitive = calculateProduct(dimTypes.primitive.kb || []);
-    const kLoop = calculateProduct(dimTypes.loop.bk || []);
-    cnk = (nPrimitive * nLoop) * (kPrimitive * kLoop);
+    const cmn = cDim * mDim * nDim;
+    const cnk = nDim * kDim;
+    const cmk = mDim * kDim;
 
-    // Calculate CMK (dimensions involving m and k)
-    let cmk = 1;
-    cmk = (mPrimitive * mLoop) * (kPrimitive * kLoop);
     return cmn + cnk + cmk;
 };
 
 /**
- * Calculates the total number of operations for an entire expression tree
- * and adds operation statistics to each node
- * @param {Object} indexSizes - Object containing the sizes of each index
- * @param {Object} tree - The expression tree to analyze
- * @returns {Object} - Object containing total operations and any faulty nodes
+ * Calculates and annotates metrics for an expression tree
+ * @param {Object} indexSizes - Size mapping for each dimension
+ * @param {Object} tree - Expression tree to analyze
+ * @param {number} dataTypeSize - Size of the data type in bytes
+ * @returns {Object} Analysis results including operations and errors
  */
 export const calculateNodeMetrics = (indexSizes, tree, dataTypeSize) => {
     let totalOperations = 0;
     let faultyNodes = [];
-    let binaryNodes = []; // Added: Collect binary operation nodes
-
+    let binaryNodes = [];
     let totalTensorSize = 0;
     let maxTensorSize = 0;
     let minTensorSize = Infinity;
 
+    // Helper function to normalize values to percentage
+    const normalizeToPercentage = (value, min, max) =>
+        ((value - min) / (max - min)) * 100;
+
     const calculateNodeSizes = (node) => {
         if (!node) return;
 
-        // Calculate tensor size
-        const nodeSize = node.value.reduce((size, index) =>
-            size * (indexSizes[index] || 1), 1
-        ) * dataTypeSize;
-
-        node.tensorSize = nodeSize;
-        totalTensorSize += nodeSize;
-        maxTensorSize = Math.max(maxTensorSize, nodeSize);
-        minTensorSize = Math.min(minTensorSize, nodeSize);
+        node.tensorSize = calculateDimensionProduct(node.value, indexSizes) * dataTypeSize;
+        totalTensorSize += node.tensorSize;
+        maxTensorSize = Math.max(maxTensorSize, node.tensorSize);
+        minTensorSize = Math.min(minTensorSize, node.tensorSize);
 
         calculateNodeSizes(node.left);
         calculateNodeSizes(node.right);
+    };
+
+    const addPercentages = (node) => {
+        if (!node) return;
+
+        node.sizePercentage = (node.tensorSize / totalTensorSize) * 100;
+        node.normalizedSizePercentage = normalizeToPercentage(
+            node.tensorSize,
+            minTensorSize,
+            maxTensorSize
+        );
+
+        addPercentages(node.left);
+        addPercentages(node.right);
     };
 
     /**
@@ -102,127 +105,73 @@ export const calculateNodeMetrics = (indexSizes, tree, dataTypeSize) => {
      * @param {Object} node - Current tree node
      */
     const resetTreeOperations = (node) => {
-        if (node.left && node.right) {
-            node.operations = 0;
-            node.operationsPercentage = 0;
-            node.normalizedPercentage = 0;
-            resetTreeOperations(node.left);
-            resetTreeOperations(node.right);
-        }
-        else if (node.left && !node.right) {
-            resetTreeOperations(node.left);
-            node.operations = 0;
-            node.operationsPercentage = 0;
-            node.normalizedPercentage = 0;
-        }
+        if (!node) return;
+
+        node.operations = 0;
+        node.operationsPercentage = 0;
+        node.normalizedPercentage = 0;
+
+        resetTreeOperations(node.left);
+        resetTreeOperations(node.right);
     };
 
-    /**
-     * Recursively calculates the total operations for each node
-     * @param {Object} node - Current tree node
-     * @returns {number} - Returns 1 if node is faulty, 0 otherwise
-     */
     const calculateOpsAndByteAccess = (node) => {
-        if (node.left && node.right) {
+        if (!node.left) return 0;
+
+        if (node.right) {
             const dimtypes = dimensionTypes(node.value, node.left.value, node.right.value);
-            if (dimtypes === null) {
+            if (!dimtypes) {
                 faultyNodes.push(node);
-                calculateOpsAndByteAccess(node.left);
-                calculateOpsAndByteAccess(node.right);
                 return 1;
             }
-            const operations = calculateOperations(dimtypes, indexSizes);
-            const byteAccesses = caluclateByteAccesses(dimtypes, indexSizes);
-            node.byteAccesses = byteAccesses;
-            node.operations = operations;
-            totalOperations += operations;
-            binaryNodes.push(node); // Added: push binary nodes
 
-            if (calculateOpsAndByteAccess(node.left) === 1 || calculateOpsAndByteAccess(node.right) === 1) {
-                return 1;
-            }
+            node.byteAccesses = caluclateByteAccesses(dimtypes, indexSizes);
+            node.operations = calculateOperations(dimtypes, indexSizes);
+            totalOperations += node.operations;
+            binaryNodes.push(node);
         }
-        else if (node.left && !node.right) {
-            node.operations = 0;
-            calculateOpsAndByteAccess(node.left);
-        }
-        return 0;
-    };
 
-    // Remove recursive calculation of raw percentages:
-    // const calculateRawPercentages = (node) => { ... };
-
-    /**
-     * Normalizes a percentage value between 0 and 100
-     * @param {number} value - Value to normalize
-     * @param {number} min - Minimum value in range
-     * @param {number} max - Maximum value in range
-     * @returns {number} - Normalized value between 0 and 100
-     */
-    const normalizePercentage = (value, min, max) => {
-        return ((value - min) / (max - min)) * 100;
-    };
-
-    /**
-     * Adds normalized percentages to each node in the tree
-     * @param {Object} node - Current tree node
-     * @param {number} minPercentage - Minimum percentage value
-     * @param {number} maxPercentage - Maximum percentage value
-     */
-    const addNormalizedPercentages = (node, minPercentage, maxPercentage) => {
-        if (node.left && node.right) {
-            node.normalizedPercentage = normalizePercentage(
-                node.operationsPercentage,
-                minPercentage,
-                maxPercentage
-            );
-            addNormalizedPercentages(node.left, minPercentage, maxPercentage);
-            addNormalizedPercentages(node.right, minPercentage, maxPercentage);
-        }
-        else if (node.left && !node.right) {
-            node.normalizedPercentage = 0;
-            addNormalizedPercentages(node.left, minPercentage, maxPercentage);
-        }
+        return Math.max(
+            calculateOpsAndByteAccess(node.left),
+            node.right ? calculateOpsAndByteAccess(node.right) : 0
+        );
     };
 
     calculateNodeSizes(tree);
-
-    const addPercentages = (node) => {
-        if (!node) return;
-
-        // Raw percentage of total
-        node.sizePercentage = (node.tensorSize / totalTensorSize) * 100;
-
-        // Normalized percentage (0-100 scale)
-        node.normalizedSizePercentage =
-            ((node.tensorSize - minTensorSize) / (maxTensorSize - minTensorSize)) * 100;
-
-        addPercentages(node.left);
-        addPercentages(node.right);
-    };
-
     addPercentages(tree);
 
-    calculateOpsAndByteAccess(tree);
-    if (faultyNodes.length > 0) {
+    if (calculateOpsAndByteAccess(tree) > 0) {
         totalOperations = 0;
         resetTreeOperations(tree);
-    }
-    if (totalOperations === 0) {
         return { totalOperations, faultyNodes };
     }
+
     tree.totalOperations = totalOperations;
 
+    // Calculate operation percentages
     binaryNodes.forEach(node => {
         node.operationsPercentage = (node.operations / totalOperations) * 100;
         node.totalOperations = totalOperations;
     });
 
+    // Normalize operation percentages
     const percentages = binaryNodes.map(node => node.operationsPercentage);
-    const minPercentage = Math.min(...percentages);
-    const maxPercentage = Math.max(...percentages);
+    const [minPercentage, maxPercentage] = [Math.min(...percentages), Math.max(...percentages)];
 
-    addNormalizedPercentages(tree, minPercentage, maxPercentage);
+    const addNormalizedPercentages = (node) => {
+        if (!node) return;
+        if (node.left && node.right) {
+            node.normalizedPercentage = normalizeToPercentage(
+                node.operationsPercentage,
+                minPercentage,
+                maxPercentage
+            );
+        }
+        addNormalizedPercentages(node.left);
+        addNormalizedPercentages(node.right);
+    };
+
+    addNormalizedPercentages(tree);
 
     return { totalOperations, faultyNodes };
 };

@@ -491,7 +491,7 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
       if (node.data) {
         const nodeInTree = findNodeInTree(tree.getRoot(), node.id);
         if (nodeInTree) {
-          return {
+          const updatedNode = {
             ...node,
             data: {
               ...node.data,
@@ -499,18 +499,18 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
               ...nodeInTree,
             }
           };
+
+          // Update selected node if this is the selected one
+          if (selectedNode && node.id === selectedNode.id) {
+            setSelectedNode(updatedNode);
+            setSelectedNodeOperations(updatedNode.data.operations || 0);
+          }
+
+          return updatedNode;
         }
       }
       return { ...node, data: { ...node.data, isFaulty: isFaulty } };
     });
-
-    if (selectedNode) {
-      const updatedSelectedNode = findNodeInTree(tree.getRoot(), selectedNode.id);
-      if (updatedSelectedNode) {
-        selectedNode.data.label = updatedSelectedNode.value;
-        setSelectedNodeOperations(updatedSelectedNode.operations);
-      }
-    }
 
     setNodes1(updatedNodes);
 
@@ -778,6 +778,7 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
                         <div className="text-lg mb-2">
                           <span className="font-medium">Arithemtic Intensity:&nbsp;</span>
                           {(() => {
+                            console.log(selectedNodeOperations, calcByteAccess(selectedNode.data.byteAccesses));
                             return formatNumber(selectedNodeOperations / calcByteAccess(selectedNode.data.byteAccesses));
                           })()}
                         </div>
