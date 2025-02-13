@@ -15,7 +15,7 @@ function isLetterOrNumber(char) {
  * @returns {boolean} True if the character is valid in array context
  */
 function isValidArrayChar(char) {
-  return /^[a-zA-Z0-9,[\]]$/.test(char);
+  return /^[a-zA-Z0-9,\]]$/.test(char);
 }
 
 /**
@@ -80,7 +80,7 @@ export function parseTree(str) {
       }
       if (str.slice(index, index + 2) !== '+[' && str.slice(index, index + 2) !== ',[') {
         throw new Error(formatError(
-          `Expected '+[' or ',[' but found '${str.slice(index, index + 2)}'`,
+          `Expected '+[', ',[' or '->[' but found '${str.slice(index, index + 2)}'`,
           index
         ));
       }

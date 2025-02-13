@@ -776,10 +776,18 @@ const EinsumTreeVisualizer = ({ initialExpression, initialSizes }) => {
                       )}
                       {selectedNodeOperations > 0 && selectedNode?.data?.label && (
                         <div className="text-lg mb-2">
-                          <span className="font-medium">#Ops/#Bytes:&nbsp;</span>
+                          <span className="font-medium">Arithemtic Intensity:&nbsp;</span>
                           {(() => {
                             return formatNumber(selectedNodeOperations / calcByteAccess(selectedNode.data.byteAccesses));
                           })()}
+                        </div>
+                      )}
+                      {selectedNode?.data?.label && (
+                        <div className="text-lg mb-2">
+                          <span className="font-medium">#Size/#Size per Tree:&nbsp;</span>
+                          {(() => {
+                            return formatNumber(selectedNode.data.sizePercentage);
+                          })()} %
                         </div>
                       )}
                     </CollapsiblePanel>
